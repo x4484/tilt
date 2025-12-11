@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { fetchContractStateFromChain } from "./blockchain";
 import { db } from "./db";
 import { farcasterUsers } from "@shared/schema";
 import { eq } from "drizzle-orm";
@@ -25,7 +26,7 @@ export async function registerRoutes(
 
     const sendContractState = async () => {
       if (ws.readyState === WebSocket.OPEN) {
-        const state = await storage.getContractState();
+        const state = await fetchContractStateFromChain();
         ws.send(JSON.stringify({
           type: 'contract_state',
           data: state,
@@ -103,7 +104,7 @@ export async function registerRoutes(
   };
 
   setInterval(async () => {
-    const state = await storage.getContractState();
+    const state = await fetchContractStateFromChain();
     broadcast({
       type: 'contract_state',
       data: state,
@@ -111,7 +112,7 @@ export async function registerRoutes(
   }, 10000);
 
   app.get('/api/contract/state', async (req, res) => {
-    const state = await storage.getContractState();
+    const state = await fetchContractStateFromChain();
     res.json(state);
   });
 
@@ -265,7 +266,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // Update entry directly (this also recalculates contract state)
+      // Update leaderboard entry in database (for fast leaderboard queries)
       await storage.updateLeaderboard([{
         address,
         balance: balance.toString(),
@@ -273,11 +274,11 @@ export async function registerRoutes(
         rank: 0,
       }]);
       
-      // Broadcast updated leaderboard and contract state
+      // Broadcast updated leaderboard and fresh contract state from chain
       const [up, down, state] = await Promise.all([
         storage.getLeaderboard('up'),
         storage.getLeaderboard('down'),
-        storage.getContractState(),
+        fetchContractStateFromChain(),
       ]);
       
       broadcast({
@@ -294,32 +295,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error('Failed to update leaderboard:', error);
       res.status(500).json({ error: 'Failed to update leaderboard' });
-    }
-  });
-
-  // Update contract state
-  app.post('/api/contract/state', async (req, res) => {
-    try {
-      const { totalSupply, ups, isUpOnly, tvl, currentPrice } = req.body;
-      
-      await storage.setContractState({
-        totalSupply: totalSupply?.toString() || '0',
-        ups: ups?.toString() || '0',
-        isUpOnly: isUpOnly ?? true,
-        tvl: tvl?.toString() || '0',
-        currentPrice: currentPrice?.toString() || '0',
-      });
-      
-      const state = await storage.getContractState();
-      broadcast({
-        type: 'contract_state',
-        data: state,
-      });
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Failed to update contract state:', error);
-      res.status(500).json({ error: 'Failed to update contract state' });
     }
   });
 
