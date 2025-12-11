@@ -501,6 +501,19 @@ export function TiltProvider({ children }: { children: ReactNode }) {
                   setActivities(message.data as ActivityEvent[]);
                 }
                 break;
+              case "new_activity":
+                // Prepend new activity to the existing list
+                if (message.data) {
+                  setActivities(prev => {
+                    const newActivity = message.data as ActivityEvent;
+                    // Avoid duplicates by checking ID
+                    if (prev.some(a => a.id === newActivity.id)) {
+                      return prev;
+                    }
+                    return [newActivity, ...prev].slice(0, 50); // Keep max 50 activities
+                  });
+                }
+                break;
               case "leaderboard":
                 if (message.data) {
                   const { up, down } = message.data as { up: LeaderboardEntry[]; down: LeaderboardEntry[] };
