@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 // This is an ERC20 token on Base that uses a bonding curve to set token prices.
 // Token holders are able to select a position (Up Only or Down Only) and can switch at any time.
@@ -12,10 +13,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // This contract is solely for the purposes of experimentation, exploration, and entertainment.
 // This contract has been tested locally and on testnets, but has not been formally audited. Users are advised to use at their own risk.
-// This contract has no admin-only functionality, and cannot be changed in any way after deployment.
-// The creator of this contract will earn no fees, royalties, or any other form of income from this contract.
-// The creator of this contract will not mint, burn, or select a position in this contract.
-// If any tokens are sent to a wallet owned by the creator, they will not be used in any way (equivalent to sending the tokens to any unowned address).
 
 interface ITILT {
     enum Side {
@@ -27,6 +24,7 @@ interface ITILT {
     event Mint(address indexed addr, uint256 amount, uint256 totalSupply);
     event Burn(address indexed addr, uint256 amount, uint256 totalSupply);
     event SwitchSides(address indexed addr, Side side, uint256 amount);
+    event FeesWithdrawn(address indexed to, uint256 amount);
 
     error UpOnly();
     error DownOnly();
@@ -34,13 +32,26 @@ interface ITILT {
     error RefundFailed();
     error BalanceTooLow();
     error UninitializedWallet();
+    error WithdrawFailed();
+    error NoFeesToWithdraw();
 }
 
-contract TILT is ERC20, ITILT {
+contract TILT is ERC20, Ownable, ITILT {
     uint256 public ups;
     mapping(address => Side) public sides;
+    
+    // 1% fee (100 basis points out of 10000)
+    uint256 public constant FEE_BPS = 100;
+    uint256 public feeReserve;
 
-    constructor() ERC20("TILT", "TILT") {}
+    constructor() ERC20("TILT", "TILT") Ownable(msg.sender) {}
+
+    /* -------------------------------------------------------------------------- */
+    /*                                  FEE LOGIC                                 */
+    /* -------------------------------------------------------------------------- */
+    function _calculateFee(uint256 amount) internal pure returns (uint256) {
+        return (amount * FEE_BPS + 9999) / 10000; // Round up for small amounts
+    }
 
     /* -------------------------------------------------------------------------- */
     /*                                    MINT                                    */
@@ -48,8 +59,11 @@ contract TILT is ERC20, ITILT {
     function mint(uint256 amount) external payable {
         if (!isUpOnly()) revert DownOnly();
 
-        uint256 fees = mintFees(amount);
-        if (msg.value < fees) revert NotEnoughETH();
+        uint256 cost = mintFees(amount);
+        uint256 fee = _calculateFee(cost);
+        uint256 totalCost = cost + fee;
+        
+        if (msg.value < totalCost) revert NotEnoughETH();
 
         _mint(msg.sender, amount);
 
@@ -59,8 +73,12 @@ contract TILT is ERC20, ITILT {
         }
         if (sides[msg.sender] == Side.Up) ups += amount;
 
-        if (msg.value > fees) {
-            (bool sent,) = msg.sender.call{value: msg.value - fees}("");
+        // Accumulate fee
+        feeReserve += fee;
+
+        // Refund excess ETH
+        if (msg.value > totalCost) {
+            (bool sent,) = msg.sender.call{value: msg.value - totalCost}("");
             if (!sent) revert RefundFailed();
         }
 
@@ -69,6 +87,12 @@ contract TILT is ERC20, ITILT {
 
     function mintFees(uint256 amount) public view returns (uint256) {
         return _totalPriceFor(totalSupply() + amount) - _totalPriceFor(totalSupply());
+    }
+
+    /// @notice Returns total cost including 1% fee for minting `amount` tokens
+    function mintFeesWithFee(uint256 amount) public view returns (uint256) {
+        uint256 cost = mintFees(amount);
+        return cost + _calculateFee(cost);
     }
 
     function _totalPriceFor(uint256 amount) internal pure returns (uint256) {
@@ -87,12 +111,18 @@ contract TILT is ERC20, ITILT {
 
         if (amount > balanceOf(msg.sender)) revert BalanceTooLow();
 
-        uint256 refund = burnRefunds(amount);
+        uint256 grossRefund = burnRefunds(amount);
+        uint256 fee = _calculateFee(grossRefund);
+        uint256 payout = grossRefund - fee;
+        
         _burn(msg.sender, amount);
 
         if (sides[msg.sender] == Side.Up) ups -= amount;
 
-        (bool sent,) = msg.sender.call{value: refund}("");
+        // Accumulate fee
+        feeReserve += fee;
+
+        (bool sent,) = msg.sender.call{value: payout}("");
         if (!sent) revert RefundFailed();
 
         emit Burn(msg.sender, amount, totalSupply());
@@ -100,6 +130,12 @@ contract TILT is ERC20, ITILT {
 
     function burnRefunds(uint256 amount) public view returns (uint256) {
         return _totalPriceFor(totalSupply()) - _totalPriceFor(totalSupply() - amount);
+    }
+
+    /// @notice Returns net refund after 1% fee for burning `amount` tokens
+    function burnRefundsAfterFee(uint256 amount) public view returns (uint256) {
+        uint256 grossRefund = burnRefunds(amount);
+        return grossRefund - _calculateFee(grossRefund);
     }
 
     /* -------------------------------------------------------------------------- */
@@ -153,5 +189,28 @@ contract TILT is ERC20, ITILT {
 
         // Emit event
         emit SwitchSides(msg.sender, sides[msg.sender], balanceOf(msg.sender));
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                FEE WITHDRAWAL                              */
+    /* -------------------------------------------------------------------------- */
+    /// @notice Withdraw accumulated fees (owner only)
+    /// @param to Address to send fees to
+    function withdrawFees(address payable to) external onlyOwner {
+        uint256 amount = feeReserve;
+        if (amount == 0) revert NoFeesToWithdraw();
+        
+        // Update state before external call (checks-effects-interactions)
+        feeReserve = 0;
+        
+        (bool sent,) = to.call{value: amount}("");
+        if (!sent) revert WithdrawFailed();
+        
+        emit FeesWithdrawn(to, amount);
+    }
+
+    /// @notice View accumulated fees
+    function getAccumulatedFees() external view returns (uint256) {
+        return feeReserve;
     }
 }
