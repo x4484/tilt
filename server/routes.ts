@@ -116,6 +116,18 @@ export async function registerRoutes(
     });
   }, 10000);
 
+  // Broadcast leaderboard every 15 seconds
+  setInterval(async () => {
+    const [up, down] = await Promise.all([
+      storage.getLeaderboard('up'),
+      storage.getLeaderboard('down'),
+    ]);
+    broadcast({
+      type: 'leaderboard',
+      data: { up, down },
+    });
+  }, 15000);
+
   app.get('/api/contract/state', async (req, res) => {
     const state = await fetchContractStateFromChain();
     res.json(state);
