@@ -26,7 +26,8 @@ export function StatsPanel() {
 
   const upsNum = parseInt(ups, 10);
   const totalNum = parseInt(totalSupply, 10);
-  const upPercentage = totalNum > 0 ? Math.round((upsNum / totalNum) * 100) : 50;
+  // When totalSupply is 0, use isUpOnly to determine percentage (100% if up, 0% if down)
+  const upPercentage = totalNum > 0 ? Math.round((upsNum / totalNum) * 100) : (isUpOnly ? 100 : 0);
 
   return (
     <div className="space-y-3">
