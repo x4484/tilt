@@ -63,8 +63,8 @@ function TiltAppContent() {
 
           <Card className="border-primary/10 bg-card/50">
             <CardContent className="p-4 text-sm text-muted-foreground space-y-2 text-left">
-              <p className="font-medium text-foreground">$TILT is a bonding-curve token game on Base where holders vote on the direction of the market.</p>
-              <p>Each holder can set a preference for Up Only or Down Only.</p>
+              <p className="font-medium text-foreground">$TILT is a Base ERC20 whose price is defined by a bonding curve. The curve determines the cost to mint new tokens and the refund for burning tokens.</p>
+              <p>Each token holder can set a preference for Up Only or Down Only.</p>
               <p>When the total number of tokens held by Up aligned holders is greater, only the Minting function is enabled.</p>
               <p>On the other hand, when the total number of tokens held by Down aligned holders is greater, only the Burning function is enabled.</p>
               <p className="text-xs text-muted-foreground/70 mt-2">This contract is experimental and has not been formally audited. Use at your own risk. 1% mint/burn fee.</p>
