@@ -68,9 +68,15 @@ If no wallet is detected in the browser, an error message prompts the user to in
 ## WebSocket
 
 Connect to `/ws` for real-time updates on:
-- Contract state changes
-- New activity events
-- Leaderboard updates
+- Contract state changes (`contract_state`)
+- New activity events (`new_activity` for individual events, `activities` for full list)
+- Leaderboard updates (`leaderboard`)
+
+The frontend TiltContext automatically connects to WebSocket and handles:
+- Real-time contract state updates
+- Incremental activity updates (prepends new activities with deduplication)
+- Leaderboard updates for both Up and Down factions
+- Automatic reconnection with exponential backoff
 
 ## Farcaster Mini App
 
