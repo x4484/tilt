@@ -11,6 +11,11 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Farcaster manifest redirect
+  app.get('/.well-known/farcaster.json', (req, res) => {
+    res.redirect(307, 'https://api.farcaster.xyz/miniapps/hosted-manifest/019b0cac-de5f-ddfe-2c05-638a060c4f07');
+  });
+
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   const clients = new Set<WebSocket>();
