@@ -1,0 +1,157 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity ^0.8.20;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+// This is an ERC20 token on Base that uses a bonding curve to set token prices.
+// Token holders are able to select a position (Up Only or Down Only) and can switch at any time.
+// When Up Only has a majority, the contract disables the ability to sell their tokens back to the contract.
+// This means an Up Only majority will ensure the prife of the token can only stay the same or go up, as more people mint tokens.
+// When Down Only has a majority, the contract disables the ability to buy more tokens from the contract.
+// This means a Down Only majority will ensure the price of the token can only stay the same or go down, as more people burn tokens for a refund.
+
+// This contract is solely for the purposes of experimentation, exploration, and entertainment.
+// This contract has been tested locally and on testnets, but has not been formally audited. Users are advised to use at their own risk.
+// This contract has no admin-only functionality, and cannot be changed in any way after deployment.
+// The creator of this contract will earn no fees, royalties, or any other form of income from this contract.
+// The creator of this contract will not mint, burn, or select a position in this contract.
+// If any tokens are sent to a wallet owned by the creator, they will not be used in any way (equivalent to sending the tokens to any unowned address).
+
+interface ITILT {
+    enum Side {
+        None,
+        Up,
+        Down
+    }
+
+    event Mint(address indexed addr, uint256 amount, uint256 totalSupply);
+    event Burn(address indexed addr, uint256 amount, uint256 totalSupply);
+    event SwitchSides(address indexed addr, Side side, uint256 amount);
+
+    error UpOnly();
+    error DownOnly();
+    error NotEnoughETH();
+    error RefundFailed();
+    error BalanceTooLow();
+    error UninitializedWallet();
+}
+
+contract TILT is ERC20, ITILT {
+    uint256 public ups;
+    mapping(address => Side) public sides;
+
+    constructor() ERC20("TILT", "TILT") {}
+
+    /* -------------------------------------------------------------------------- */
+    /*                                    MINT                                    */
+    /* -------------------------------------------------------------------------- */
+    function mint(uint256 amount) external payable {
+        if (!isUpOnly()) revert DownOnly();
+
+        uint256 fees = mintFees(amount);
+        if (msg.value < fees) revert NotEnoughETH();
+
+        _mint(msg.sender, amount);
+
+        if (sides[msg.sender] == Side.None) {
+            sides[msg.sender] = Side.Up;
+            emit SwitchSides(msg.sender, Side.Up, amount);
+        }
+        if (sides[msg.sender] == Side.Up) ups += amount;
+
+        if (msg.value > fees) {
+            (bool sent,) = msg.sender.call{value: msg.value - fees}("");
+            if (!sent) revert RefundFailed();
+        }
+
+        emit Mint(msg.sender, amount, totalSupply());
+    }
+
+    function mintFees(uint256 amount) public view returns (uint256) {
+        return _totalPriceFor(totalSupply() + amount) - _totalPriceFor(totalSupply());
+    }
+
+    function _totalPriceFor(uint256 amount) internal pure returns (uint256) {
+        return (amount * (amount + 1) * (2 * amount + 1)) / 6;
+    }
+
+    function decimals() public view virtual override returns (uint8) {
+        return 0;
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                    BURN                                    */
+    /* -------------------------------------------------------------------------- */
+    function burn(uint256 amount) external {
+        if (isUpOnly()) revert UpOnly();
+
+        if (amount > balanceOf(msg.sender)) revert BalanceTooLow();
+
+        uint256 refund = burnRefunds(amount);
+        _burn(msg.sender, amount);
+
+        if (sides[msg.sender] == Side.Up) ups -= amount;
+
+        (bool sent,) = msg.sender.call{value: refund}("");
+        if (!sent) revert RefundFailed();
+
+        emit Burn(msg.sender, amount, totalSupply());
+    }
+
+    function burnRefunds(uint256 amount) public view returns (uint256) {
+        return _totalPriceFor(totalSupply()) - _totalPriceFor(totalSupply() - amount);
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                  TRANSFER                                  */
+    /* -------------------------------------------------------------------------- */
+    function transfer(address recipient, uint256 amount) public override returns (bool) {
+        // Adjust balances if sender and recipient are on different sides
+        _beforeTransfer(msg.sender, recipient, amount);
+        return super.transfer(recipient, amount);
+    }
+
+    function transferFrom(address sender, address recipient, uint256 amount) public override returns (bool) {
+        // Adjust balances if sender and recipient are on different sides
+        _beforeTransfer(sender, recipient, amount);
+        return super.transferFrom(sender, recipient, amount);
+    }
+
+    function _beforeTransfer(address sender, address recipient, uint256 amount) internal {
+        // Initialize recipient wallet if not initialized, and set isUpOnly to sender's isUpOnly
+        if (sides[recipient] == Side.None) {
+            sides[recipient] = sides[sender];
+            emit SwitchSides(recipient, sides[sender], amount);
+        }
+
+        // Adjust balances if sender and recipient are on different sides
+        if (sides[sender] != sides[recipient]) {
+            if (sides[sender] == Side.Up) ups -= amount;
+            else ups += amount;
+        }
+    }
+
+    /* -------------------------------------------------------------------------- */
+    /*                                    SIDES                                   */
+    /* -------------------------------------------------------------------------- */
+    function isUpOnly() public view returns (bool) {
+        return ups >= (totalSupply() + 1) / 2;
+    }
+
+    function switchSides() external {
+        // Don't allow uninitialized wallets to switch sides
+        if (sides[msg.sender] == Side.None) revert UninitializedWallet();
+
+        // Adjust balances
+        if (sides[msg.sender] == Side.Up) {
+            ups -= balanceOf(msg.sender);
+            sides[msg.sender] = Side.Down;
+        } else {
+            ups += balanceOf(msg.sender);
+            sides[msg.sender] = Side.Up;
+        }
+
+        // Emit event
+        emit SwitchSides(msg.sender, sides[msg.sender], balanceOf(msg.sender));
+    }
+}
