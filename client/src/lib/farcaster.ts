@@ -16,10 +16,31 @@ export interface FarcasterContext {
 
 let isInitialized = false;
 let cachedContext: FarcasterContext | null = null;
+let detectedAsMiniApp = false;
 
 export function isMiniApp(): boolean {
+  return detectedAsMiniApp;
+}
+
+function checkMiniAppEnvironment(): boolean {
   if (typeof window === "undefined") return false;
-  return window.parent !== window || !!(window as unknown as { ReactNativeWebView?: unknown }).ReactNativeWebView;
+  
+  const hasReactNativeWebView = !!(window as unknown as { ReactNativeWebView?: unknown }).ReactNativeWebView;
+  if (hasReactNativeWebView) return true;
+  
+  const isInIframe = window.parent !== window;
+  if (!isInIframe) return false;
+  
+  try {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('fc') || urlParams.has('farcaster')) return true;
+    
+    if (document.referrer.includes('warpcast.com') || 
+        document.referrer.includes('farcaster.xyz')) return true;
+  } catch {
+  }
+  
+  return false;
 }
 
 export async function initializeFarcaster(): Promise<FarcasterContext | null> {
@@ -27,15 +48,23 @@ export async function initializeFarcaster(): Promise<FarcasterContext | null> {
     return cachedContext;
   }
 
-  try {
-    if (!isMiniApp()) {
-      isInitialized = true;
-      return null;
-    }
+  detectedAsMiniApp = checkMiniAppEnvironment();
 
-    const context = await sdk.context;
+  if (!detectedAsMiniApp) {
+    isInitialized = true;
+    return null;
+  }
+
+  try {
+    const contextPromise = sdk.context;
+    const timeoutPromise = new Promise<null>((resolve) => {
+      setTimeout(() => resolve(null), 3000);
+    });
+
+    const context = await Promise.race([contextPromise, timeoutPromise]);
     
     if (context) {
+      detectedAsMiniApp = true;
       cachedContext = {
         user: context.user ? {
           fid: context.user.fid,
@@ -48,12 +77,15 @@ export async function initializeFarcaster(): Promise<FarcasterContext | null> {
           added: context.client.added,
         } : undefined,
       };
+    } else {
+      detectedAsMiniApp = false;
     }
 
     isInitialized = true;
     return cachedContext;
   } catch (error) {
     console.error("Failed to initialize Farcaster SDK:", error);
+    detectedAsMiniApp = false;
     isInitialized = true;
     return null;
   }
