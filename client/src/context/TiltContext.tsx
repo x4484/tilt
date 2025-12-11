@@ -292,16 +292,20 @@ export function TiltProvider({ children }: { children: ReactNode }) {
   }, [userAddress]);
 
   const updateLeaderboardEntry = useCallback(async () => {
-    if (!userAddress || !userState) return;
+    if (!userAddress) return;
     
     try {
+      // Fetch fresh user state from blockchain to get accurate balance and side
+      const provider = await getReadOnlyProvider();
+      const freshUserState = await fetchUserState(provider, userAddress);
+      
       await fetch('/api/contract/leaderboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           address: userAddress,
-          balance: userState.balance,
-          side: userState.side,
+          balance: freshUserState.balance,
+          side: freshUserState.side,
         }),
       });
       
@@ -322,7 +326,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("Failed to update leaderboard:", err);
     }
-  }, [userAddress, userState]);
+  }, [userAddress]);
 
   const mint = useCallback(async (amount: string, fees: string): Promise<boolean> => {
     if (!ethereumProvider) {
