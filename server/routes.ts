@@ -265,7 +265,7 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // Update entry directly
+      // Update entry directly (this also recalculates contract state)
       await storage.updateLeaderboard([{
         address,
         balance: balance.toString(),
@@ -273,15 +273,21 @@ export async function registerRoutes(
         rank: 0,
       }]);
       
-      // Broadcast updated leaderboard
-      const [up, down] = await Promise.all([
+      // Broadcast updated leaderboard and contract state
+      const [up, down, state] = await Promise.all([
         storage.getLeaderboard('up'),
         storage.getLeaderboard('down'),
+        storage.getContractState(),
       ]);
       
       broadcast({
         type: 'leaderboard',
         data: { up, down },
+      });
+      
+      broadcast({
+        type: 'contract_state',
+        data: state,
       });
       
       res.json({ success: true });

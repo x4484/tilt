@@ -181,8 +181,38 @@ export class DatabaseStorage implements IStorage {
           });
         }
       }
+      
+      // Recalculate ups from all leaderboard entries and update contract state
+      await this.recalculateContractStateFromLeaderboard();
     } catch (err) {
       console.error("Failed to update leaderboard:", err);
+    }
+  }
+  
+  async recalculateContractStateFromLeaderboard(): Promise<void> {
+    try {
+      const allEntries = await db.select().from(leaderboardEntries);
+      
+      let totalSupply = 0;
+      let ups = 0;
+      
+      for (const entry of allEntries) {
+        const balance = parseInt(entry.balance) || 0;
+        totalSupply += balance;
+        if (entry.side === Side.Up) {
+          ups += balance;
+        }
+      }
+      
+      const currentState = await this.getContractState();
+      await this.setContractState({
+        ...currentState,
+        totalSupply: totalSupply.toString(),
+        ups: ups.toString(),
+        isUpOnly: totalSupply === 0 || ups === totalSupply,
+      });
+    } catch (err) {
+      console.error("Failed to recalculate contract state:", err);
     }
   }
 }
