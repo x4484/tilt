@@ -20,32 +20,35 @@ export async function registerRoutes(
       message: 'Connected to TILT WebSocket server',
     }));
 
-    const sendContractState = () => {
+    const sendContractState = async () => {
       if (ws.readyState === WebSocket.OPEN) {
+        const state = await storage.getContractState();
         ws.send(JSON.stringify({
           type: 'contract_state',
-          data: storage.getContractState(),
+          data: state,
         }));
       }
     };
 
-    const sendActivities = () => {
+    const sendActivities = async () => {
       if (ws.readyState === WebSocket.OPEN) {
+        const acts = await storage.getActivities();
         ws.send(JSON.stringify({
           type: 'activities',
-          data: storage.getActivities(),
+          data: acts,
         }));
       }
     };
 
-    const sendLeaderboard = () => {
+    const sendLeaderboard = async () => {
       if (ws.readyState === WebSocket.OPEN) {
+        const [up, down] = await Promise.all([
+          storage.getLeaderboard('up'),
+          storage.getLeaderboard('down'),
+        ]);
         ws.send(JSON.stringify({
           type: 'leaderboard',
-          data: {
-            up: storage.getLeaderboard('up'),
-            down: storage.getLeaderboard('down'),
-          },
+          data: { up, down },
         }));
       }
     };
@@ -96,29 +99,33 @@ export async function registerRoutes(
     });
   };
 
-  setInterval(() => {
+  setInterval(async () => {
+    const state = await storage.getContractState();
     broadcast({
       type: 'contract_state',
-      data: storage.getContractState(),
+      data: state,
     });
   }, 10000);
 
-  app.get('/api/contract/state', (req, res) => {
-    res.json(storage.getContractState());
+  app.get('/api/contract/state', async (req, res) => {
+    const state = await storage.getContractState();
+    res.json(state);
   });
 
-  app.get('/api/contract/activities', (req, res) => {
+  app.get('/api/contract/activities', async (req, res) => {
     const limit = parseInt(req.query.limit as string) || 20;
-    res.json(storage.getActivities(limit));
+    const acts = await storage.getActivities(limit);
+    res.json(acts);
   });
 
-  app.get('/api/contract/leaderboard/:side', (req, res) => {
+  app.get('/api/contract/leaderboard/:side', async (req, res) => {
     const side = req.params.side as 'up' | 'down';
     if (side !== 'up' && side !== 'down') {
       return res.status(400).json({ error: 'Invalid side parameter' });
     }
     const limit = parseInt(req.query.limit as string) || 10;
-    res.json(storage.getLeaderboard(side, limit));
+    const leaderboard = await storage.getLeaderboard(side, limit);
+    res.json(leaderboard);
   });
 
   app.get('/api/health', (req, res) => {
@@ -126,7 +133,7 @@ export async function registerRoutes(
   });
 
   // Post a new activity (called after successful transactions)
-  app.post('/api/contract/activity', (req, res) => {
+  app.post('/api/contract/activity', async (req, res) => {
     try {
       const { type, address, amount, txHash, newSide } = req.body;
       
@@ -144,7 +151,7 @@ export async function registerRoutes(
         newSide,
       };
       
-      storage.addActivity(activity);
+      await storage.addActivity(activity);
       
       // Broadcast to all WebSocket clients
       broadcast({
@@ -160,7 +167,7 @@ export async function registerRoutes(
   });
 
   // Update leaderboard entry
-  app.post('/api/contract/leaderboard', (req, res) => {
+  app.post('/api/contract/leaderboard', async (req, res) => {
     try {
       const { address, balance, side } = req.body;
       
@@ -168,40 +175,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // Get current leaderboards and update
-      const targetSide = side === 1 ? 'up' : 'down';
-      const currentLeaderboard = storage.getLeaderboard(targetSide, 100);
-      
-      // Find and update or add entry
-      const existingIndex = currentLeaderboard.findIndex(e => e.address.toLowerCase() === address.toLowerCase());
-      
-      if (existingIndex >= 0) {
-        currentLeaderboard[existingIndex].balance = balance.toString();
-        currentLeaderboard[existingIndex].side = side;
-      } else {
-        currentLeaderboard.push({
-          address,
-          balance: balance.toString(),
-          side,
-          rank: currentLeaderboard.length + 1,
-        });
-      }
-      
-      // Re-sort and update ranks
-      currentLeaderboard.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
-      currentLeaderboard.forEach((entry, index) => {
-        entry.rank = index + 1;
-      });
-      
-      storage.updateLeaderboard(currentLeaderboard);
+      // Update entry directly
+      await storage.updateLeaderboard([{
+        address,
+        balance: balance.toString(),
+        side,
+        rank: 0,
+      }]);
       
       // Broadcast updated leaderboard
+      const [up, down] = await Promise.all([
+        storage.getLeaderboard('up'),
+        storage.getLeaderboard('down'),
+      ]);
+      
       broadcast({
         type: 'leaderboard',
-        data: {
-          up: storage.getLeaderboard('up'),
-          down: storage.getLeaderboard('down'),
-        },
+        data: { up, down },
       });
       
       res.json({ success: true });
@@ -212,11 +202,11 @@ export async function registerRoutes(
   });
 
   // Update contract state
-  app.post('/api/contract/state', (req, res) => {
+  app.post('/api/contract/state', async (req, res) => {
     try {
       const { totalSupply, ups, isUpOnly, tvl, currentPrice } = req.body;
       
-      storage.setContractState({
+      await storage.setContractState({
         totalSupply: totalSupply?.toString() || '0',
         ups: ups?.toString() || '0',
         isUpOnly: isUpOnly ?? true,
@@ -224,9 +214,10 @@ export async function registerRoutes(
         currentPrice: currentPrice?.toString() || '0',
       });
       
+      const state = await storage.getContractState();
       broadcast({
         type: 'contract_state',
-        data: storage.getContractState(),
+        data: state,
       });
       
       res.json({ success: true });

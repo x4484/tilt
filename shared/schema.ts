@@ -1,10 +1,48 @@
 import { z } from "zod";
+import { pgTable, serial, text, integer, boolean, bigint } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
 
 export enum Side {
   None = 0,
   Up = 1,
   Down = 2,
 }
+
+// Database tables
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  eventId: text("event_id").notNull(),
+  type: text("type").notNull(), // 'mint' | 'burn' | 'switch'
+  address: text("address").notNull(),
+  amount: text("amount").notNull(),
+  timestamp: bigint("timestamp", { mode: "number" }).notNull(),
+  txHash: text("tx_hash"),
+  newSide: integer("new_side"),
+});
+
+export const leaderboardEntries = pgTable("leaderboard_entries", {
+  id: serial("id").primaryKey(),
+  address: text("address").notNull().unique(),
+  balance: text("balance").notNull(),
+  side: integer("side").notNull(),
+});
+
+export const contractStateCache = pgTable("contract_state_cache", {
+  id: serial("id").primaryKey(),
+  totalSupply: text("total_supply").notNull().default("0"),
+  ups: text("ups").notNull().default("0"),
+  isUpOnly: boolean("is_up_only").notNull().default(true),
+  tvl: text("tvl").notNull().default("0"),
+  currentPrice: text("current_price").notNull().default("0"),
+});
+
+export const insertActivitySchema = createInsertSchema(activities).omit({ id: true });
+export const insertLeaderboardSchema = createInsertSchema(leaderboardEntries).omit({ id: true });
+
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertLeaderboard = z.infer<typeof insertLeaderboardSchema>;
+export type LeaderboardDb = typeof leaderboardEntries.$inferSelect;
 
 export const contractStateSchema = z.object({
   totalSupply: z.string(),
