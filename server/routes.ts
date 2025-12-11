@@ -125,5 +125,116 @@ export async function registerRoutes(
     res.json({ status: 'ok', timestamp: Date.now() });
   });
 
+  // Post a new activity (called after successful transactions)
+  app.post('/api/contract/activity', (req, res) => {
+    try {
+      const { type, address, amount, txHash, newSide } = req.body;
+      
+      if (!type || !address || !amount) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      const activity = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: type as 'mint' | 'burn' | 'switch',
+        address,
+        amount: amount.toString(),
+        timestamp: Date.now(),
+        txHash,
+        newSide,
+      };
+      
+      storage.addActivity(activity);
+      
+      // Broadcast to all WebSocket clients
+      broadcast({
+        type: 'new_activity',
+        data: activity,
+      });
+      
+      res.json({ success: true, activity });
+    } catch (error) {
+      console.error('Failed to add activity:', error);
+      res.status(500).json({ error: 'Failed to add activity' });
+    }
+  });
+
+  // Update leaderboard entry
+  app.post('/api/contract/leaderboard', (req, res) => {
+    try {
+      const { address, balance, side } = req.body;
+      
+      if (!address || balance === undefined || side === undefined) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Get current leaderboards and update
+      const targetSide = side === 1 ? 'up' : 'down';
+      const currentLeaderboard = storage.getLeaderboard(targetSide, 100);
+      
+      // Find and update or add entry
+      const existingIndex = currentLeaderboard.findIndex(e => e.address.toLowerCase() === address.toLowerCase());
+      
+      if (existingIndex >= 0) {
+        currentLeaderboard[existingIndex].balance = balance.toString();
+        currentLeaderboard[existingIndex].side = side;
+      } else {
+        currentLeaderboard.push({
+          address,
+          balance: balance.toString(),
+          side,
+          rank: currentLeaderboard.length + 1,
+        });
+      }
+      
+      // Re-sort and update ranks
+      currentLeaderboard.sort((a, b) => parseInt(b.balance) - parseInt(a.balance));
+      currentLeaderboard.forEach((entry, index) => {
+        entry.rank = index + 1;
+      });
+      
+      storage.updateLeaderboard(currentLeaderboard);
+      
+      // Broadcast updated leaderboard
+      broadcast({
+        type: 'leaderboard',
+        data: {
+          up: storage.getLeaderboard('up'),
+          down: storage.getLeaderboard('down'),
+        },
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to update leaderboard:', error);
+      res.status(500).json({ error: 'Failed to update leaderboard' });
+    }
+  });
+
+  // Update contract state
+  app.post('/api/contract/state', (req, res) => {
+    try {
+      const { totalSupply, ups, isUpOnly, tvl, currentPrice } = req.body;
+      
+      storage.setContractState({
+        totalSupply: totalSupply?.toString() || '0',
+        ups: ups?.toString() || '0',
+        isUpOnly: isUpOnly ?? true,
+        tvl: tvl?.toString() || '0',
+        currentPrice: currentPrice?.toString() || '0',
+      });
+      
+      broadcast({
+        type: 'contract_state',
+        data: storage.getContractState(),
+      });
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Failed to update contract state:', error);
+      res.status(500).json({ error: 'Failed to update contract state' });
+    }
+  });
+
   return httpServer;
 }

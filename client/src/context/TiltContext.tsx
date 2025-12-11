@@ -264,6 +264,66 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     return calculateBurnRefundsClientSide(amount);
   }, [calculateBurnRefundsClientSide]);
 
+  const postActivity = useCallback(async (type: 'mint' | 'burn' | 'switch', amount: string, txHash?: string, newSide?: Side) => {
+    if (!userAddress) return;
+    
+    try {
+      await fetch('/api/contract/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type,
+          address: userAddress,
+          amount,
+          txHash,
+          newSide,
+        }),
+      });
+      
+      // Refresh activities
+      const activitiesRes = await fetch('/api/contract/activities?limit=20');
+      if (activitiesRes.ok) {
+        const acts = await activitiesRes.json();
+        setActivities(acts);
+      }
+    } catch (err) {
+      console.error("Failed to post activity:", err);
+    }
+  }, [userAddress]);
+
+  const updateLeaderboardEntry = useCallback(async () => {
+    if (!userAddress || !userState) return;
+    
+    try {
+      await fetch('/api/contract/leaderboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          address: userAddress,
+          balance: userState.balance,
+          side: userState.side,
+        }),
+      });
+      
+      // Refresh leaderboards
+      const [upRes, downRes] = await Promise.all([
+        fetch('/api/contract/leaderboard/up?limit=10'),
+        fetch('/api/contract/leaderboard/down?limit=10'),
+      ]);
+      
+      if (upRes.ok) {
+        const up = await upRes.json();
+        setUpLeaderboard(up);
+      }
+      if (downRes.ok) {
+        const down = await downRes.json();
+        setDownLeaderboard(down);
+      }
+    } catch (err) {
+      console.error("Failed to update leaderboard:", err);
+    }
+  }, [userAddress, userState]);
+
   const mint = useCallback(async (amount: string, fees: string): Promise<boolean> => {
     if (!ethereumProvider) {
       setError("Wallet not connected");
@@ -278,9 +338,16 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const provider = await getProvider(ethereumProvider);
-      await contractMint(provider, amount, fees);
+      const result = await contractMint(provider, amount, fees);
+      const txHash = result?.hash;
+      
       await refreshContractState();
       await refreshUserState();
+      
+      // Post activity and update leaderboard
+      await postActivity('mint', amount, txHash);
+      setTimeout(() => updateLeaderboardEntry(), 500);
+      
       return true;
     } catch (err) {
       console.error("Mint failed:", err);
@@ -289,7 +356,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [ethereumProvider, refreshContractState, refreshUserState]);
+  }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry]);
 
   const burn = useCallback(async (amount: string): Promise<boolean> => {
     if (!ethereumProvider) {
@@ -305,9 +372,16 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const provider = await getProvider(ethereumProvider);
-      await contractBurn(provider, amount);
+      const result = await contractBurn(provider, amount);
+      const txHash = result?.hash;
+      
       await refreshContractState();
       await refreshUserState();
+      
+      // Post activity and update leaderboard
+      await postActivity('burn', amount, txHash);
+      setTimeout(() => updateLeaderboardEntry(), 500);
+      
       return true;
     } catch (err) {
       console.error("Burn failed:", err);
@@ -316,7 +390,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [ethereumProvider, refreshContractState, refreshUserState]);
+  }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry]);
 
   const switchSides = useCallback(async (): Promise<boolean> => {
     if (!ethereumProvider) {
@@ -332,9 +406,17 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       const provider = await getProvider(ethereumProvider);
-      await contractSwitchSides(provider);
+      const result = await contractSwitchSides(provider);
+      const txHash = result?.hash;
+      
       await refreshContractState();
       await refreshUserState();
+      
+      // Post activity with the new side
+      const newSide = userState?.side === Side.Up ? Side.Down : Side.Up;
+      await postActivity('switch', userState?.balance || '0', txHash, newSide);
+      setTimeout(() => updateLeaderboardEntry(), 500);
+      
       return true;
     } catch (err) {
       console.error("Switch sides failed:", err);
@@ -343,7 +425,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [ethereumProvider, refreshContractState, refreshUserState]);
+  }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry, userState]);
 
   useEffect(() => {
     const init = async () => {
