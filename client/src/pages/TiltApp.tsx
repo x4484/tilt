@@ -67,9 +67,7 @@ function TiltAppContent() {
               <p>Each holder can set a preference for Up Only or Down Only.</p>
               <p>When the total number of tokens held by Up aligned holders is greater, only the Minting function is enabled.</p>
               <p>On the other hand, when the total number of tokens held by Down aligned holders is greater, only the Burning function is enabled.</p>
-              <p className="text-xs text-muted-foreground/70 mt-2">
-                This contract is experimental and has not been formally audited. Use at your own risk.
-              </p>
+              <p className="text-xs text-muted-foreground/70 mt-2">This contract is experimental and has not been formally audited. Use at your own risk. 1% mint/burn fee.</p>
             </CardContent>
           </Card>
 
