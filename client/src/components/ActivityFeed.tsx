@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTilt } from "@/context/TiltContext";
-import { truncateAddress, formatTokenAmount } from "@/lib/contract";
+import { formatTokenAmount } from "@/lib/contract";
+import { useFarcasterUsers, formatDisplayName } from "@/hooks/useFarcasterUsers";
 import type { ActivityEvent } from "@shared/schema";
 import { Side } from "@shared/schema";
 import { Activity } from "lucide-react";
@@ -15,7 +16,16 @@ function formatTimeAgo(timestamp: number): string {
   return `${Math.floor(seconds / 86400)}D`;
 }
 
-function ActivityItem({ event }: { event: ActivityEvent }) {
+function ActivityItem({ 
+  event, 
+  users 
+}: { 
+  event: ActivityEvent;
+  users: Record<string, { username: string; pfpUrl?: string }> | undefined;
+}) {
+  const displayName = formatDisplayName(event.address, users);
+  const isUsername = displayName.startsWith('@');
+
   const getIcon = () => {
     switch (event.type) {
       case "mint":
@@ -48,7 +58,7 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
     <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
       {getIcon()}
       <div className="flex-1 min-w-0">
-        <span className="font-mono text-sm truncate">{truncateAddress(event.address)}</span>
+        <span className={`text-sm ${isUsername ? 'text-primary' : 'font-mono'}`}>{displayName}</span>
         <span className="text-muted-foreground text-sm ml-2">
           {getActionText()}
           {event.type !== "switch" && ` ${formatTokenAmount(event.amount)}`}
@@ -63,6 +73,10 @@ function ActivityItem({ event }: { event: ActivityEvent }) {
 
 export function ActivityFeed() {
   const { activities, isLoading } = useTilt();
+  
+  // Collect all addresses to resolve
+  const allAddresses = activities.map(e => e.address);
+  const { data: users } = useFarcasterUsers(allAddresses);
 
   return (
     <Card className="border-primary/20 bg-card/80">
@@ -87,7 +101,7 @@ export function ActivityFeed() {
           ) : (
             <div className="py-2">
               {activities.map((event) => (
-                <ActivityItem key={event.id} event={event} />
+                <ActivityItem key={event.id} event={event} users={users} />
               ))}
             </div>
           )}

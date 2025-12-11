@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { BrowserProvider, type Eip1193Provider } from "ethers";
 import type { ContractState, UserState, ActivityEvent, LeaderboardEntry } from "@shared/schema";
 import { Side } from "@shared/schema";
@@ -449,19 +449,102 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
   }, [userAddress, refreshUserState]);
 
+  // WebSocket connection for real-time updates
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
+
+  useEffect(() => {
+    const connectWebSocket = () => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        return;
+      }
+
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+      try {
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          console.log("WebSocket connected");
+          reconnectAttemptsRef.current = 0;
+        };
+
+        ws.onclose = () => {
+          console.log("WebSocket disconnected");
+          if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+            reconnectAttemptsRef.current++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+            reconnectTimeoutRef.current = setTimeout(connectWebSocket, delay);
+          }
+        };
+
+        ws.onerror = (error) => {
+          console.error("WebSocket error:", error);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            
+            switch (message.type) {
+              case "contract_state":
+                if (message.data) {
+                  setContractState(message.data as ContractState);
+                }
+                break;
+              case "activities":
+                if (message.data) {
+                  setActivities(message.data as ActivityEvent[]);
+                }
+                break;
+              case "leaderboard":
+                if (message.data) {
+                  const { up, down } = message.data as { up: LeaderboardEntry[]; down: LeaderboardEntry[] };
+                  if (up) setUpLeaderboard(up);
+                  if (down) setDownLeaderboard(down);
+                }
+                break;
+            }
+          } catch (error) {
+            console.error("Failed to parse WebSocket message:", error);
+          }
+        };
+      } catch (error) {
+        console.error("Failed to create WebSocket:", error);
+      }
+    };
+
+    connectWebSocket();
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, []);
+
+  // Fallback polling for when WebSocket is not available
   useEffect(() => {
     const interval = setInterval(() => {
-      fetchDataFromApi();
-      if (isContractConfigured()) {
-        refreshContractState();
+      // Only fetch from API if WebSocket is not connected
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        fetchDataFromApi();
       }
-      if (userAddress) {
+      // Reduce direct RPC calls to avoid rate limits - rely on API/WebSocket data
+      if (userAddress && isContractConfigured()) {
         refreshUserState();
       }
-    }, 15000);
+    }, 60000); // Reduced to 60s to minimize rate limit issues
 
     return () => clearInterval(interval);
-  }, [refreshContractState, refreshUserState, userAddress, fetchDataFromApi]);
+  }, [refreshUserState, userAddress, fetchDataFromApi]);
 
   return (
     <TiltContext.Provider

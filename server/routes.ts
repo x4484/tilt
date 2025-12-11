@@ -2,6 +2,9 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
+import { db } from "./db";
+import { farcasterUsers } from "@shared/schema";
+import { eq } from "drizzle-orm";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -130,6 +133,93 @@ export async function registerRoutes(
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
+  });
+
+  const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+
+  // Resolve addresses to Farcaster usernames via Neynar API
+  app.get('/api/farcaster/users', async (req, res) => {
+    try {
+      const addresses = req.query.addresses as string;
+      if (!addresses) {
+        return res.status(400).json({ error: 'addresses parameter required' });
+      }
+
+      const addressList = addresses.split(',').map(a => a.toLowerCase().trim());
+      const result: Record<string, { username: string; pfpUrl?: string }> = {};
+      const uncachedAddresses: string[] = [];
+
+      // Check database cache first
+      const now = Date.now();
+      for (const addr of addressList) {
+        try {
+          const [cached] = await db.select().from(farcasterUsers).where(eq(farcasterUsers.address, addr));
+          if (cached && now - cached.updatedAt < CACHE_TTL) {
+            result[addr] = { username: cached.username, pfpUrl: cached.pfpUrl || undefined };
+          } else {
+            uncachedAddresses.push(addr);
+          }
+        } catch {
+          uncachedAddresses.push(addr);
+        }
+      }
+
+      // Fetch uncached addresses from Neynar
+      if (uncachedAddresses.length > 0 && process.env.NEYNAR_API_KEY) {
+        try {
+          const neynarResponse = await fetch(
+            `https://api.neynar.com/v2/farcaster/user/bulk-by-address?addresses=${uncachedAddresses.join(',')}`,
+            {
+              headers: {
+                'x-api-key': process.env.NEYNAR_API_KEY,
+              },
+            }
+          );
+
+          if (neynarResponse.ok) {
+            const data = await neynarResponse.json();
+            // Response is keyed by address
+            for (const [addr, users] of Object.entries(data)) {
+              const userArray = users as Array<{ username: string; pfp_url?: string }>;
+              if (userArray && userArray.length > 0) {
+                const user = userArray[0];
+                const lowerAddr = addr.toLowerCase();
+                result[lowerAddr] = { 
+                  username: user.username, 
+                  pfpUrl: user.pfp_url 
+                };
+                
+                // Save to database
+                try {
+                  const existing = await db.select().from(farcasterUsers).where(eq(farcasterUsers.address, lowerAddr));
+                  if (existing.length > 0) {
+                    await db.update(farcasterUsers)
+                      .set({ username: user.username, pfpUrl: user.pfp_url, updatedAt: now })
+                      .where(eq(farcasterUsers.address, lowerAddr));
+                  } else {
+                    await db.insert(farcasterUsers).values({
+                      address: lowerAddr,
+                      username: user.username,
+                      pfpUrl: user.pfp_url,
+                      updatedAt: now,
+                    });
+                  }
+                } catch (dbError) {
+                  console.error('Failed to cache username:', dbError);
+                }
+              }
+            }
+          }
+        } catch (neynarError) {
+          console.error('Neynar API error:', neynarError);
+        }
+      }
+
+      res.json(result);
+    } catch (error) {
+      console.error('Failed to resolve addresses:', error);
+      res.status(500).json({ error: 'Failed to resolve addresses' });
+    }
   });
 
   // Post a new activity (called after successful transactions)

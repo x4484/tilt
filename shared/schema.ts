@@ -36,6 +36,14 @@ export const contractStateCache = pgTable("contract_state_cache", {
   currentPrice: text("current_price").notNull().default("0"),
 });
 
+export const farcasterUsers = pgTable("farcaster_users", {
+  id: serial("id").primaryKey(),
+  address: text("address").notNull().unique(),
+  username: text("username").notNull(),
+  pfpUrl: text("pfp_url"),
+  updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+});
+
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true });
 export const insertLeaderboardSchema = createInsertSchema(leaderboardEntries).omit({ id: true });
 

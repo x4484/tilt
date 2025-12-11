@@ -2,18 +2,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTilt } from "@/context/TiltContext";
-import { formatTokenAmount, truncateAddress } from "@/lib/contract";
+import { formatTokenAmount } from "@/lib/contract";
+import { useFarcasterUsers, formatDisplayName } from "@/hooks/useFarcasterUsers";
 import { Side } from "@shared/schema";
 import type { LeaderboardEntry } from "@shared/schema";
 import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
 
-function LeaderboardItem({ entry, side }: { entry: LeaderboardEntry; side: Side }) {
+function LeaderboardItem({ 
+  entry, 
+  side,
+  users 
+}: { 
+  entry: LeaderboardEntry; 
+  side: Side;
+  users: Record<string, { username: string; pfpUrl?: string }> | undefined;
+}) {
+  const displayName = formatDisplayName(entry.address, users);
+  const isUsername = displayName.startsWith('@');
+  
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
       <div 
         className={`w-3 h-3 rounded-sm ${side === Side.Up ? "bg-primary" : "bg-destructive"}`}
       />
-      <span className="font-mono text-sm flex-1">{truncateAddress(entry.address)}</span>
+      <span className={`text-sm flex-1 ${isUsername ? 'text-primary' : 'font-mono'}`}>
+        {displayName}
+      </span>
       <span className="font-mono text-sm font-bold">
         {formatTokenAmount(entry.balance)}
       </span>
@@ -23,6 +37,10 @@ function LeaderboardItem({ entry, side }: { entry: LeaderboardEntry; side: Side 
 
 export function Leaderboard() {
   const { upLeaderboard, downLeaderboard, contractState, isLoading } = useTilt();
+
+  // Collect all addresses to resolve
+  const allAddresses = [...upLeaderboard, ...downLeaderboard].map(e => e.address);
+  const { data: users } = useFarcasterUsers(allAddresses);
 
   const totalSupply = parseInt(contractState?.totalSupply || "0", 10);
   const ups = parseInt(contractState?.ups || "0", 10);
@@ -90,7 +108,7 @@ export function Leaderboard() {
               ) : (
                 <div className="py-2">
                   {upLeaderboard.map((entry) => (
-                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Up} />
+                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Up} users={users} />
                   ))}
                 </div>
               )}
@@ -115,7 +133,7 @@ export function Leaderboard() {
               ) : (
                 <div className="py-2">
                   {downLeaderboard.map((entry) => (
-                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Down} />
+                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Down} users={users} />
                   ))}
                 </div>
               )}
