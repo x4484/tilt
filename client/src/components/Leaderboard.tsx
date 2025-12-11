@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTilt } from "@/context/TiltContext";
-import { formatTokenAmount } from "@/lib/contract";
+import { formatTokenAmount, truncateAddress } from "@/lib/contract";
 import { Side } from "@shared/schema";
 import type { LeaderboardEntry } from "@shared/schema";
 import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
@@ -13,7 +13,7 @@ function LeaderboardItem({ entry, side }: { entry: LeaderboardEntry; side: Side 
       <div 
         className={`w-3 h-3 rounded-sm ${side === Side.Up ? "bg-primary" : "bg-destructive"}`}
       />
-      <span className="font-mono text-sm flex-1 truncate">{entry.address}</span>
+      <span className="font-mono text-sm flex-1">{truncateAddress(entry.address)}</span>
       <span className="font-mono text-sm font-bold">
         {formatTokenAmount(entry.balance)}
       </span>
