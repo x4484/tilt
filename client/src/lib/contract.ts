@@ -71,7 +71,8 @@ export async function fetchUserState(provider: ethers.Provider, address: string)
 
 export async function fetchMintFees(provider: ethers.Provider, amount: string) {
   const contract = await getContract(provider);
-  const fees = await contract.mintFees(amount);
+  // Use mintFeesWithFee to get total cost including 1% fee
+  const fees = await contract.mintFeesWithFee(amount);
   return {
     fees: formatEther(fees),
     amount,
@@ -80,7 +81,8 @@ export async function fetchMintFees(provider: ethers.Provider, amount: string) {
 
 export async function fetchBurnRefunds(provider: ethers.Provider, amount: string) {
   const contract = await getContract(provider);
-  const refund = await contract.burnRefunds(amount);
+  // Use burnRefundsAfterFee to get net refund after 1% fee
+  const refund = await contract.burnRefundsAfterFee(amount);
   return {
     refund: formatEther(refund),
     amount,
