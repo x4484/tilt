@@ -1,7 +1,8 @@
 import { ethers, BrowserProvider, Contract, formatEther, parseEther, type Eip1193Provider } from "ethers";
 import { TILT_ABI, BASE_CHAIN_ID, BASE_RPC_URL, Side } from "@shared/schema";
 
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
+// Hardcode contract address - it's public and should always be available
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x2F803DD094E65b2fD3070941c9ce6eacf4fa87d1";
 const RPC_URL = import.meta.env.VITE_ALCHEMY_RPC_URL || BASE_RPC_URL;
 
 export function getContractAddress(): string {
