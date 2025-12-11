@@ -62,9 +62,20 @@ export async function registerRoutes(
       }
     };
 
+    const sendChatMessages = async () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        const messages = await storage.getChatMessages();
+        ws.send(JSON.stringify({
+          type: 'chat_messages',
+          data: messages,
+        }));
+      }
+    };
+
     sendContractState();
     sendActivities();
     sendLeaderboard();
+    sendChatMessages();
 
     ws.on('message', (message) => {
       try {
@@ -79,6 +90,19 @@ export async function registerRoutes(
             break;
           case 'get_leaderboard':
             sendLeaderboard();
+            break;
+          case 'get_chat_messages':
+            sendChatMessages();
+            break;
+          case 'send_chat':
+            if (data.address && data.message) {
+              storage.addChatMessage(data.address, data.message).then((chatMsg) => {
+                broadcast({
+                  type: 'new_chat_message',
+                  data: chatMsg,
+                });
+              });
+            }
             break;
           default:
             console.log('Unknown message type:', data.type);
@@ -151,6 +175,39 @@ export async function registerRoutes(
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
+  });
+
+  // Chat endpoints
+  app.get('/api/chat', async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 50;
+      const messages = await storage.getChatMessages(limit);
+      res.json(messages);
+    } catch (error) {
+      console.error('Failed to get chat messages:', error);
+      res.status(500).json({ error: 'Failed to get chat messages' });
+    }
+  });
+
+  app.post('/api/chat', async (req, res) => {
+    try {
+      const { address, message } = req.body;
+      if (!address || !message) {
+        return res.status(400).json({ error: 'address and message required' });
+      }
+      if (message.length > 500) {
+        return res.status(400).json({ error: 'Message too long (max 500 chars)' });
+      }
+      const chatMsg = await storage.addChatMessage(address, message);
+      broadcast({
+        type: 'new_chat_message',
+        data: chatMsg,
+      });
+      res.json(chatMsg);
+    } catch (error) {
+      console.error('Failed to send chat message:', error);
+      res.status(500).json({ error: 'Failed to send message' });
+    }
   });
 
   // Get user state from blockchain (production-ready endpoint)
