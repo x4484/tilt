@@ -20,61 +20,6 @@ export async function registerRoutes(
 
   const clients = new Set<WebSocket>();
 
-  // Helper to fetch and cache Farcaster user data for an address
-  async function resolveFarcasterUser(address: string): Promise<{ username?: string; pfpUrl?: string }> {
-    const lowerAddr = address.toLowerCase();
-    
-    // Check cache first
-    const cached = await storage.getFarcasterUser(lowerAddr);
-    if (cached) {
-      return cached;
-    }
-    
-    // Fetch from Neynar if not cached
-    if (process.env.NEYNAR_API_KEY) {
-      try {
-        const neynarResponse = await fetch(
-          `https://api.neynar.com/v2/farcaster/user/bulk-by-address?addresses=${lowerAddr}`,
-          {
-            headers: {
-              'x-api-key': process.env.NEYNAR_API_KEY,
-            },
-          }
-        );
-        
-        if (neynarResponse.ok) {
-          const data = await neynarResponse.json();
-          for (const users of Object.values(data)) {
-            const userArray = users as Array<{ username: string; pfp_url?: string }>;
-            if (userArray && userArray.length > 0) {
-              const user = userArray[0];
-              // Cache it
-              await storage.setFarcasterUser(lowerAddr, user.username, user.pfp_url);
-              return { username: user.username, pfpUrl: user.pfp_url };
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Neynar lookup failed for', lowerAddr, err);
-      }
-    }
-    
-    return {};
-  }
-
-  // Helper to enrich chat messages with Farcaster data
-  async function enrichChatMessages(messages: Awaited<ReturnType<typeof storage.getChatMessages>>): Promise<typeof messages> {
-    return Promise.all(messages.map(async (msg) => {
-      if (msg.username) return msg; // Already has username
-      const fcUser = await resolveFarcasterUser(msg.address);
-      return {
-        ...msg,
-        username: fcUser.username,
-        pfpUrl: fcUser.pfpUrl,
-      };
-    }));
-  }
-
   wss.on('connection', (ws) => {
     clients.add(ws);
     console.log('WebSocket client connected');
@@ -117,21 +62,9 @@ export async function registerRoutes(
       }
     };
 
-    const sendChatMessages = async () => {
-      if (ws.readyState === WebSocket.OPEN) {
-        const messages = await storage.getChatMessages();
-        const enriched = await enrichChatMessages(messages);
-        ws.send(JSON.stringify({
-          type: 'chat_messages',
-          data: enriched,
-        }));
-      }
-    };
-
     sendContractState();
     sendActivities();
     sendLeaderboard();
-    sendChatMessages();
 
     ws.on('message', (message) => {
       try {
@@ -146,26 +79,6 @@ export async function registerRoutes(
             break;
           case 'get_leaderboard':
             sendLeaderboard();
-            break;
-          case 'get_chat_messages':
-            sendChatMessages();
-            break;
-          case 'send_chat':
-            if (data.address && data.message) {
-              (async () => {
-                const fcUser = await resolveFarcasterUser(data.address);
-                const chatMsg = await storage.addChatMessage(data.address, data.message);
-                const enrichedMsg = {
-                  ...chatMsg,
-                  username: fcUser.username || chatMsg.username,
-                  pfpUrl: fcUser.pfpUrl || chatMsg.pfpUrl,
-                };
-                broadcast({
-                  type: 'new_chat_message',
-                  data: enrichedMsg,
-                });
-              })();
-            }
             break;
           default:
             console.log('Unknown message type:', data.type);
@@ -238,52 +151,6 @@ export async function registerRoutes(
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: Date.now() });
-  });
-
-  // Chat endpoints
-  app.get('/api/chat', async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 50;
-      const messages = await storage.getChatMessages(limit);
-      const enriched = await enrichChatMessages(messages);
-      res.json(enriched);
-    } catch (error) {
-      console.error('Failed to get chat messages:', error);
-      res.status(500).json({ error: 'Failed to get chat messages' });
-    }
-  });
-
-  app.post('/api/chat', async (req, res) => {
-    try {
-      const { address, message } = req.body;
-      if (!address || !message) {
-        return res.status(400).json({ error: 'address and message required' });
-      }
-      if (message.length > 500) {
-        return res.status(400).json({ error: 'Message too long (max 500 chars)' });
-      }
-      
-      // Resolve Farcaster user data before saving
-      const fcUser = await resolveFarcasterUser(address);
-      
-      const chatMsg = await storage.addChatMessage(address, message);
-      
-      // Enrich with Farcaster data for broadcast
-      const enrichedMsg = {
-        ...chatMsg,
-        username: fcUser.username || chatMsg.username,
-        pfpUrl: fcUser.pfpUrl || chatMsg.pfpUrl,
-      };
-      
-      broadcast({
-        type: 'new_chat_message',
-        data: enrichedMsg,
-      });
-      res.json(enrichedMsg);
-    } catch (error) {
-      console.error('Failed to send chat message:', error);
-      res.status(500).json({ error: 'Failed to send message' });
-    }
   });
 
   // Get user state from blockchain (production-ready endpoint)

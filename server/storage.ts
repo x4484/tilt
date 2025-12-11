@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { activities, leaderboardEntries, contractStateCache, chatMessages, farcasterUsers } from "@shared/schema";
+import { activities, leaderboardEntries, contractStateCache } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export enum Side {
@@ -33,15 +33,6 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
-export interface ChatMessage {
-  id: number;
-  address: string;
-  message: string;
-  timestamp: number;
-  username?: string;
-  pfpUrl?: string;
-}
-
 export interface IStorage {
   getContractState(): Promise<ContractState>;
   setContractState(state: ContractState): Promise<void>;
@@ -49,10 +40,6 @@ export interface IStorage {
   addActivity(activity: ActivityEvent): Promise<void>;
   getLeaderboard(side: 'up' | 'down', limit?: number): Promise<LeaderboardEntry[]>;
   updateLeaderboard(entries: LeaderboardEntry[]): Promise<void>;
-  getChatMessages(limit?: number): Promise<ChatMessage[]>;
-  addChatMessage(address: string, message: string): Promise<ChatMessage>;
-  getFarcasterUser(address: string): Promise<{ username: string; pfpUrl?: string } | null>;
-  setFarcasterUser(address: string, username: string, pfpUrl?: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -196,98 +183,6 @@ export class DatabaseStorage implements IStorage {
       }
     } catch (err) {
       console.error("Failed to update leaderboard:", err);
-    }
-  }
-
-  async getChatMessages(limit: number = 50): Promise<ChatMessage[]> {
-    try {
-      const rows = await db.select()
-        .from(chatMessages)
-        .orderBy(desc(chatMessages.timestamp))
-        .limit(limit);
-      
-      // Enrich with Farcaster user data
-      const enriched = await Promise.all(rows.map(async (row) => {
-        const user = await this.getFarcasterUser(row.address);
-        return {
-          id: row.id,
-          address: row.address,
-          message: row.message,
-          timestamp: row.timestamp,
-          username: user?.username,
-          pfpUrl: user?.pfpUrl,
-        };
-      }));
-      
-      return enriched.reverse(); // Oldest first for chat display
-    } catch (err) {
-      console.error("Failed to get chat messages:", err);
-      return [];
-    }
-  }
-
-  async addChatMessage(address: string, message: string): Promise<ChatMessage> {
-    const timestamp = Date.now();
-    const [inserted] = await db.insert(chatMessages).values({
-      address: address.toLowerCase(),
-      message,
-      timestamp,
-    }).returning();
-    
-    const user = await this.getFarcasterUser(address);
-    return {
-      id: inserted.id,
-      address: inserted.address,
-      message: inserted.message,
-      timestamp: inserted.timestamp,
-      username: user?.username,
-      pfpUrl: user?.pfpUrl,
-    };
-  }
-
-  async getFarcasterUser(address: string): Promise<{ username: string; pfpUrl?: string } | null> {
-    try {
-      const [user] = await db.select()
-        .from(farcasterUsers)
-        .where(eq(farcasterUsers.address, address.toLowerCase()))
-        .limit(1);
-      
-      if (!user) return null;
-      
-      return {
-        username: user.username,
-        pfpUrl: user.pfpUrl || undefined,
-      };
-    } catch (err) {
-      console.error("Failed to get Farcaster user:", err);
-      return null;
-    }
-  }
-
-  async setFarcasterUser(address: string, username: string, pfpUrl?: string): Promise<void> {
-    try {
-      const existing = await db.select()
-        .from(farcasterUsers)
-        .where(eq(farcasterUsers.address, address.toLowerCase()));
-      
-      if (existing.length > 0) {
-        await db.update(farcasterUsers)
-          .set({
-            username,
-            pfpUrl: pfpUrl || null,
-            updatedAt: Date.now(),
-          })
-          .where(eq(farcasterUsers.address, address.toLowerCase()));
-      } else {
-        await db.insert(farcasterUsers).values({
-          address: address.toLowerCase(),
-          username,
-          pfpUrl: pfpUrl || null,
-          updatedAt: Date.now(),
-        });
-      }
-    } catch (err) {
-      console.error("Failed to set Farcaster user:", err);
     }
   }
 }

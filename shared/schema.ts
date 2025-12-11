@@ -44,17 +44,6 @@ export const farcasterUsers = pgTable("farcaster_users", {
   updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
 });
 
-export const chatMessages = pgTable("chat_messages", {
-  id: serial("id").primaryKey(),
-  address: text("address").notNull(),
-  message: text("message").notNull(),
-  timestamp: bigint("timestamp", { mode: "number" }).notNull(),
-});
-
-export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({ id: true });
-export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
-export type ChatMessageDb = typeof chatMessages.$inferSelect;
-
 export const insertActivitySchema = createInsertSchema(activities).omit({ id: true });
 export const insertLeaderboardSchema = createInsertSchema(leaderboardEntries).omit({ id: true });
 
@@ -115,17 +104,6 @@ export const burnRefundsResponseSchema = z.object({
 });
 
 export type BurnRefundsResponse = z.infer<typeof burnRefundsResponseSchema>;
-
-export const chatMessageSchema = z.object({
-  id: z.number(),
-  address: z.string(),
-  message: z.string(),
-  timestamp: z.number(),
-  username: z.string().optional(),
-  pfpUrl: z.string().optional(),
-});
-
-export type ChatMessage = z.infer<typeof chatMessageSchema>;
 
 export const TILT_ABI = [
   "function mint(uint256 amount) external payable",

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { BrowserProvider, type Eip1193Provider } from "ethers";
-import type { ContractState, UserState, ActivityEvent, LeaderboardEntry, ChatMessage } from "@shared/schema";
+import type { ContractState, UserState, ActivityEvent, LeaderboardEntry } from "@shared/schema";
 import { Side } from "@shared/schema";
 import {
   initializeFarcaster,
@@ -36,7 +36,6 @@ interface TiltContextType {
   activities: ActivityEvent[];
   upLeaderboard: LeaderboardEntry[];
   downLeaderboard: LeaderboardEntry[];
-  chatMessages: ChatMessage[];
   error: string | null;
   connect: () => Promise<void>;
   refreshContractState: () => Promise<void>;
@@ -46,7 +45,6 @@ interface TiltContextType {
   mint: (amount: string, fees: string) => Promise<boolean>;
   burn: (amount: string) => Promise<boolean>;
   switchSides: () => Promise<boolean>;
-  sendChatMessage: (message: string) => Promise<boolean>;
   clearError: () => void;
 }
 
@@ -71,7 +69,6 @@ export function TiltProvider({ children }: { children: ReactNode }) {
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
   const [upLeaderboard, setUpLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [downLeaderboard, setDownLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ethereumProvider, setEthereumProvider] = useState<Eip1193Provider | null>(null);
   const [userAddress, setUserAddress] = useState<string | null>(null);
@@ -84,12 +81,11 @@ export function TiltProvider({ children }: { children: ReactNode }) {
 
   const fetchDataFromApi = useCallback(async () => {
     try {
-      const [stateRes, activitiesRes, upRes, downRes, chatRes] = await Promise.all([
+      const [stateRes, activitiesRes, upRes, downRes] = await Promise.all([
         fetch('/api/contract/state'),
         fetch('/api/contract/activities?limit=20'),
         fetch('/api/contract/leaderboard/up?limit=10'),
         fetch('/api/contract/leaderboard/down?limit=10'),
-        fetch('/api/chat?limit=50'),
       ]);
 
       if (stateRes.ok) {
@@ -107,10 +103,6 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       if (downRes.ok) {
         const down = await downRes.json();
         setDownLeaderboard(down);
-      }
-      if (chatRes.ok) {
-        const msgs = await chatRes.json();
-        setChatMessages(msgs);
       }
     } catch (err) {
       console.error("Failed to fetch data from API:", err);
@@ -452,40 +444,6 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
   }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry, userState]);
 
-  const sendChatMessage = useCallback(async (message: string): Promise<boolean> => {
-    if (!userAddress) {
-      setError("Wallet not connected");
-      return false;
-    }
-
-    if (!message.trim()) {
-      return false;
-    }
-
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          address: userAddress,
-          message: message.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || 'Failed to send message');
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.error("Failed to send chat message:", err);
-      setError(err instanceof Error ? err.message : "Failed to send message");
-      return false;
-    }
-  }, [userAddress]);
-
   useEffect(() => {
     const init = async () => {
       const context = await initializeFarcaster();
@@ -580,22 +538,6 @@ export function TiltProvider({ children }: { children: ReactNode }) {
                   if (down) setDownLeaderboard(down);
                 }
                 break;
-              case "chat_messages":
-                if (message.data) {
-                  setChatMessages(message.data as ChatMessage[]);
-                }
-                break;
-              case "new_chat_message":
-                if (message.data) {
-                  setChatMessages(prev => {
-                    const newMsg = message.data as ChatMessage;
-                    if (prev.some(m => m.id === newMsg.id)) {
-                      return prev;
-                    }
-                    return [...prev, newMsg].slice(-100);
-                  });
-                }
-                break;
             }
           } catch (error) {
             console.error("Failed to parse WebSocket message:", error);
@@ -648,7 +590,6 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         activities,
         upLeaderboard,
         downLeaderboard,
-        chatMessages,
         error,
         connect,
         refreshContractState,
@@ -658,7 +599,6 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         mint,
         burn,
         switchSides,
-        sendChatMessage,
         clearError,
       }}
     >
