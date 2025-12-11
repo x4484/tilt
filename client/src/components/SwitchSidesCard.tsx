@@ -29,7 +29,7 @@ export function SwitchSidesCard() {
   const handleShare = async () => {
     const sideText = currentSide === Side.Up ? "Up" : "Down";
     const formattedBalance = formatTokenAmount(balance);
-    const castText = `You are tilting ${sideText} with ${formattedBalance} $TILT\n\nhttps://tiltgame.fun/`;
+    const castText = `I am tilting ${sideText} with ${formattedBalance} $TILT\n\nhttps://tiltgame.fun`;
     await composeCast(castText);
   };
 
