@@ -91,7 +91,11 @@ export async function fetchBurnRefunds(provider: ethers.Provider, amount: string
 
 export async function mint(provider: BrowserProvider, amount: string, fees: string) {
   const contract = await getSignerContract(provider);
-  const tx = await contract.mint(amount, { value: parseEther(fees) });
+  // Add 1% buffer to fees to account for any rounding differences
+  const feesWei = parseEther(fees);
+  const buffer = feesWei / BigInt(100); // 1% buffer
+  const valueWithBuffer = feesWei + buffer;
+  const tx = await contract.mint(amount, { value: valueWithBuffer });
   return tx.wait();
 }
 

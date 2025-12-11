@@ -185,45 +185,80 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const getMintFees = useCallback(async (amount: string) => {
-    if (!isContractConfigured()) {
-      const amountNum = parseInt(amount, 10);
-      const totalSupply = parseInt(contractState?.totalSupply || "1736000", 10);
-      const newTotal = totalSupply + amountNum;
-      const oldCost = (totalSupply * (totalSupply + 1) * (2 * totalSupply + 1)) / 6;
-      const newCost = (newTotal * (newTotal + 1) * (2 * newTotal + 1)) / 6;
-      const fee = newCost - oldCost;
-      return { fees: (fee / 1e18).toFixed(8), amount };
-    }
-
-    try {
-      const provider = await getReadOnlyProvider();
-      return await fetchMintFees(provider, amount);
-    } catch (err) {
-      console.error("Failed to get mint fees:", err);
-      return null;
-    }
+  // Calculate mint fees client-side as fallback
+  const calculateMintFeesClientSide = useCallback((amount: string) => {
+    const amountNum = BigInt(amount);
+    const totalSupply = BigInt(contractState?.totalSupply || "0");
+    const newTotal = totalSupply + amountNum;
+    
+    // _totalPriceFor formula: (n * (n + 1) * (2n + 1)) / 6
+    const oldCost = (totalSupply * (totalSupply + BigInt(1)) * (BigInt(2) * totalSupply + BigInt(1))) / BigInt(6);
+    const newCost = (newTotal * (newTotal + BigInt(1)) * (BigInt(2) * newTotal + BigInt(1))) / BigInt(6);
+    const baseCost = newCost - oldCost;
+    
+    // Add 1% fee (rounded up): (baseCost * 100 + 9999) / 10000
+    const fee = (baseCost * BigInt(100) + BigInt(9999)) / BigInt(10000);
+    const totalCost = baseCost + fee;
+    
+    // Convert to ETH (wei to ETH)
+    const totalCostStr = totalCost.toString();
+    const ethValue = Number(totalCostStr) / 1e18;
+    
+    return { fees: ethValue.toFixed(18), amount };
   }, [contractState?.totalSupply]);
+
+  // Calculate burn refunds client-side as fallback
+  const calculateBurnRefundsClientSide = useCallback((amount: string) => {
+    const amountNum = BigInt(amount);
+    const totalSupply = BigInt(contractState?.totalSupply || "0");
+    if (totalSupply < amountNum) {
+      return { refund: "0", amount };
+    }
+    const newTotal = totalSupply - amountNum;
+    
+    const oldCost = (totalSupply * (totalSupply + BigInt(1)) * (BigInt(2) * totalSupply + BigInt(1))) / BigInt(6);
+    const newCost = (newTotal * (newTotal + BigInt(1)) * (BigInt(2) * newTotal + BigInt(1))) / BigInt(6);
+    const grossRefund = oldCost - newCost;
+    
+    // Subtract 1% fee (rounded up)
+    const fee = (grossRefund * BigInt(100) + BigInt(9999)) / BigInt(10000);
+    const netRefund = grossRefund - fee;
+    
+    const refundStr = netRefund.toString();
+    const ethValue = Number(refundStr) / 1e18;
+    
+    return { refund: ethValue.toFixed(18), amount };
+  }, [contractState?.totalSupply]);
+
+  const getMintFees = useCallback(async (amount: string) => {
+    // Always try contract first, fallback to client-side calculation
+    if (isContractConfigured()) {
+      try {
+        const provider = await getReadOnlyProvider();
+        return await fetchMintFees(provider, amount);
+      } catch (err) {
+        console.error("Failed to get mint fees from contract, using fallback:", err);
+      }
+    }
+    
+    // Fallback to client-side calculation
+    return calculateMintFeesClientSide(amount);
+  }, [calculateMintFeesClientSide]);
 
   const getBurnRefunds = useCallback(async (amount: string) => {
-    if (!isContractConfigured()) {
-      const amountNum = parseInt(amount, 10);
-      const totalSupply = parseInt(contractState?.totalSupply || "1736000", 10);
-      const newTotal = totalSupply - amountNum;
-      const oldCost = (totalSupply * (totalSupply + 1) * (2 * totalSupply + 1)) / 6;
-      const newCost = (newTotal * (newTotal + 1) * (2 * newTotal + 1)) / 6;
-      const refund = oldCost - newCost;
-      return { refund: (refund / 1e18).toFixed(8), amount };
+    // Always try contract first, fallback to client-side calculation
+    if (isContractConfigured()) {
+      try {
+        const provider = await getReadOnlyProvider();
+        return await fetchBurnRefunds(provider, amount);
+      } catch (err) {
+        console.error("Failed to get burn refunds from contract, using fallback:", err);
+      }
     }
-
-    try {
-      const provider = await getReadOnlyProvider();
-      return await fetchBurnRefunds(provider, amount);
-    } catch (err) {
-      console.error("Failed to get burn refunds:", err);
-      return null;
-    }
-  }, [contractState?.totalSupply]);
+    
+    // Fallback to client-side calculation
+    return calculateBurnRefundsClientSide(amount);
+  }, [calculateBurnRefundsClientSide]);
 
   const mint = useCallback(async (amount: string, fees: string): Promise<boolean> => {
     if (!ethereumProvider) {
