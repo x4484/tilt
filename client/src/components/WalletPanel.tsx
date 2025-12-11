@@ -4,11 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { useTilt } from "@/context/TiltContext";
 import { truncateAddress, formatTokenAmount } from "@/lib/contract";
 import { Side } from "@shared/schema";
-import { Wallet, Copy, Check, TrendingUp, TrendingDown } from "lucide-react";
+import { Wallet, Copy, Check, TrendingUp, TrendingDown, AlertCircle, X } from "lucide-react";
 import { useState } from "react";
 
 export function WalletPanel() {
-  const { isConnected, isLoading, userState, connect } = useTilt();
+  const { isConnected, isLoading, userState, connect, error, clearError } = useTilt();
   const [copied, setCopied] = useState(false);
 
   const copyAddress = async () => {
@@ -22,7 +22,21 @@ export function WalletPanel() {
   if (!isConnected) {
     return (
       <Card className="border-primary/30 bg-card/80">
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-3">
+          {error && (
+            <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/30 text-sm">
+              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+              <span className="flex-1 text-destructive">{error}</span>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                onClick={clearError}
+                className="h-5 w-5 shrink-0"
+              >
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
           <Button
             onClick={connect}
             disabled={isLoading}

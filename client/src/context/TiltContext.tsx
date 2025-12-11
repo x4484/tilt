@@ -187,18 +187,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     try {
       const provider = await getEthereumProvider();
       if (!provider) {
-        if (!isInFrame) {
-          const demoAddress = "0x" + "a".repeat(40);
-          setUserAddress(demoAddress);
-          setIsConnected(true);
-          setUserState({
-            address: demoAddress,
-            balance: "30000",
-            side: Side.Up,
-          });
-        } else {
-          setError("Wallet not available in frame");
-        }
+        setError("No wallet detected. Please install MetaMask or another Web3 wallet.");
         return;
       }
 
@@ -206,11 +195,15 @@ export function TiltProvider({ children }: { children: ReactNode }) {
 
       const accounts = await requestAccounts();
       if (accounts.length === 0) {
-        setError("No accounts found");
+        setError("No accounts found. Please unlock your wallet and try again.");
         return;
       }
 
-      await switchToBase();
+      try {
+        await switchToBase();
+      } catch (switchErr) {
+        console.warn("Could not switch to Base network:", switchErr);
+      }
 
       setUserAddress(accounts[0]);
       setIsConnected(true);
@@ -220,7 +213,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [isInFrame]);
+  }, []);
 
   const getMintFees = useCallback(async (amount: string) => {
     if (!isContractConfigured()) {

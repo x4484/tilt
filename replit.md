@@ -48,6 +48,15 @@ When `VITE_CONTRACT_ADDRESS` is not set, the app uses demo data for visualizatio
 2. Use Farcaster's wallet provider for transactions
 3. Fetch live state from the bonding curve contract
 
+### Wallet Connection
+
+The app supports two wallet connection modes:
+
+1. **Farcaster Mini App**: When running inside a Farcaster frame, uses `sdk.wallet.ethProvider` from the Farcaster SDK
+2. **Web Browser**: When running in a regular browser, uses `window.ethereum` (MetaMask, Coinbase Wallet, etc.)
+
+If no wallet is detected in the browser, an error message prompts the user to install MetaMask or another Web3 wallet.
+
 ## API Endpoints
 
 - `GET /api/contract/state` - Current contract state (supply, ups, TVL, price)
