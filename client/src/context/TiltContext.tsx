@@ -142,9 +142,22 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const provider = await getReadOnlyProvider();
-      const state = await fetchUserState(provider, userAddress);
-      setUserState(state);
+      // Use server API to fetch user state (more reliable than direct RPC from browser)
+      const response = await fetch(`/api/debug/user/${userAddress}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log("User state from server API:", data);
+        setUserState({
+          address: userAddress,
+          balance: data.balance,
+          side: data.side as Side,
+        });
+      } else {
+        // Fallback to direct blockchain fetch
+        const provider = await getReadOnlyProvider();
+        const state = await fetchUserState(provider, userAddress);
+        setUserState(state);
+      }
     } catch (err) {
       console.error("Failed to fetch user state:", err);
     }

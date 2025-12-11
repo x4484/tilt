@@ -56,18 +56,26 @@ export async function fetchContractState(provider: ethers.Provider) {
 }
 
 export async function fetchUserState(provider: ethers.Provider, address: string) {
+  console.log("fetchUserState called with address:", address, "RPC_URL:", RPC_URL);
   const contract = await getContract(provider);
   
-  const [balance, side] = await Promise.all([
-    contract.balanceOf(address),
-    contract.sides(address),
-  ]);
+  try {
+    const [balance, side] = await Promise.all([
+      contract.balanceOf(address),
+      contract.sides(address),
+    ]);
+    
+    console.log("fetchUserState result - balance:", balance.toString(), "side:", Number(side));
 
-  return {
-    address,
-    balance: balance.toString(),
-    side: Number(side) as Side,
-  };
+    return {
+      address,
+      balance: balance.toString(),
+      side: Number(side) as Side,
+    };
+  } catch (err) {
+    console.error("fetchUserState error:", err);
+    throw err;
+  }
 }
 
 export async function fetchMintFees(provider: ethers.Provider, amount: string) {
@@ -102,7 +110,7 @@ export async function mint(provider: BrowserProvider, amount: string, fees: stri
   // Set explicit gas limit to avoid gas estimation issues
   const tx = await contract.mint(amount, { 
     value: valueWithBuffer,
-    gasLimit: 200000n // Explicit gas limit to skip estimation
+    gasLimit: BigInt(200000) // Explicit gas limit to skip estimation
   });
   
   // Try to wait for receipt, but handle providers that don't support it
@@ -121,7 +129,7 @@ export async function mint(provider: BrowserProvider, amount: string, fees: stri
 
 export async function burn(provider: BrowserProvider, amount: string) {
   const contract = await getSignerContract(provider);
-  const tx = await contract.burn(amount, { gasLimit: 150000n });
+  const tx = await contract.burn(amount, { gasLimit: BigInt(150000) });
   
   try {
     return await tx.wait();
@@ -137,7 +145,7 @@ export async function burn(provider: BrowserProvider, amount: string) {
 
 export async function switchSides(provider: BrowserProvider) {
   const contract = await getSignerContract(provider);
-  const tx = await contract.switchSides({ gasLimit: 100000n });
+  const tx = await contract.switchSides({ gasLimit: BigInt(100000) });
   
   try {
     return await tx.wait();
