@@ -84,11 +84,12 @@ export function TiltProvider({ children }: { children: ReactNode }) {
 
   const fetchDataFromApi = useCallback(async () => {
     try {
-      const [stateRes, activitiesRes, upRes, downRes] = await Promise.all([
+      const [stateRes, activitiesRes, upRes, downRes, chatRes] = await Promise.all([
         fetch('/api/contract/state'),
         fetch('/api/contract/activities?limit=20'),
         fetch('/api/contract/leaderboard/up?limit=10'),
         fetch('/api/contract/leaderboard/down?limit=10'),
+        fetch('/api/chat?limit=50'),
       ]);
 
       if (stateRes.ok) {
@@ -106,6 +107,10 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       if (downRes.ok) {
         const down = await downRes.json();
         setDownLeaderboard(down);
+      }
+      if (chatRes.ok) {
+        const msgs = await chatRes.json();
+        setChatMessages(msgs);
       }
     } catch (err) {
       console.error("Failed to fetch data from API:", err);
