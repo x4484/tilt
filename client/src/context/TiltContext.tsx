@@ -50,43 +50,13 @@ interface TiltContextType {
 
 const TiltContext = createContext<TiltContextType | null>(null);
 
-const DEMO_CONTRACT_STATE: ContractState = {
-  totalSupply: "1736000",
-  ups: "1700320",
+const EMPTY_CONTRACT_STATE: ContractState = {
+  totalSupply: "0",
+  ups: "0",
   isUpOnly: true,
-  tvl: "1.736",
-  currentPrice: "0.00000300",
+  tvl: "0",
+  currentPrice: "0",
 };
-
-const DEMO_ACTIVITIES: ActivityEvent[] = [
-  { id: "1", type: "switch", address: "nbaronia.eth", amount: "7000", timestamp: Date.now() - 60000, newSide: Side.Down },
-  { id: "2", type: "mint", address: "nbaronia.eth", amount: "7000", timestamp: Date.now() - 240000 },
-  { id: "3", type: "mint", address: "olotus.eth", amount: "25000", timestamp: Date.now() - 420000 },
-  { id: "4", type: "mint", address: "donosaur.eth", amount: "42100", timestamp: Date.now() - 3600000 },
-  { id: "5", type: "switch", address: "codyb.eth", amount: "5000", timestamp: Date.now() - 3600000, newSide: Side.Down },
-  { id: "6", type: "mint", address: "codyb.eth", amount: "5000", timestamp: Date.now() - 3600000 },
-  { id: "7", type: "mint", address: "chd.eth", amount: "69", timestamp: Date.now() - 3600000 },
-  { id: "8", type: "mint", address: "hot.sdv.eth", amount: "50000", timestamp: Date.now() - 64800000 },
-];
-
-const DEMO_UP_LEADERBOARD: LeaderboardEntry[] = [
-  { address: "0x4888c0030b743c...eth", balance: "500000", side: Side.Up, rank: 1 },
-  { address: "javamonn.eth", balance: "500000", side: Side.Up, rank: 2 },
-  { address: "0x6dca...8a58", balance: "300000", side: Side.Up, rank: 3 },
-  { address: "chd.eth", balance: "100070", side: Side.Up, rank: 4 },
-  { address: "sh101.eth", balance: "50000", side: Side.Up, rank: 5 },
-  { address: "hot.sdv.eth", balance: "50000", side: Side.Up, rank: 6 },
-  { address: "donosaur.eth", balance: "42070", side: Side.Up, rank: 7 },
-  { address: "4484.eth", balance: "30000", side: Side.Up, rank: 8 },
-  { address: "olotus.eth", balance: "25000", side: Side.Up, rank: 9 },
-  { address: "immanual.eth", balance: "25000", side: Side.Up, rank: 10 },
-];
-
-const DEMO_DOWN_LEADERBOARD: LeaderboardEntry[] = [
-  { address: "0xa16e...2348", balance: "20000", side: Side.Down, rank: 1 },
-  { address: "nbaronia.eth", balance: "6970", side: Side.Down, rank: 2 },
-  { address: "codyb.eth", balance: "5000", side: Side.Down, rank: 3 },
-];
 
 export function TiltProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -141,10 +111,10 @@ export function TiltProvider({ children }: { children: ReactNode }) {
 
   const refreshContractState = useCallback(async () => {
     if (!isContractConfigured()) {
-      setContractState(DEMO_CONTRACT_STATE);
-      setActivities(DEMO_ACTIVITIES);
-      setUpLeaderboard(DEMO_UP_LEADERBOARD);
-      setDownLeaderboard(DEMO_DOWN_LEADERBOARD);
+      setContractState(EMPTY_CONTRACT_STATE);
+      setActivities([]);
+      setUpLeaderboard([]);
+      setDownLeaderboard([]);
       return;
     }
 
@@ -155,7 +125,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       setIsContractReady(true);
     } catch (err) {
       console.error("Failed to fetch contract state:", err);
-      setContractState(DEMO_CONTRACT_STATE);
+      setContractState(EMPTY_CONTRACT_STATE);
     }
   }, []);
 
@@ -165,8 +135,8 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     if (!isContractConfigured()) {
       setUserState({
         address: userAddress,
-        balance: "30000",
-        side: Side.Up,
+        balance: "0",
+        side: Side.None,
       });
       return;
     }
