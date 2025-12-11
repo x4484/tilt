@@ -66,7 +66,7 @@ function TiltAppContent() {
               <p className="font-medium text-foreground">$TILT is a Base ERC20 whose price is defined by a bonding curve. The curve determines the cost to mint new tokens and the refund for burning tokens.</p>
               <p>Each token holder can set a preference for Up Only or Down Only. Your side is based on your wallet’s declared preference, and your voting power equals the number of tokens you hold.</p>
               <p>If Up side holds ≥ 50% of supply → 🟩 Minting (buying) is enabled and 🟥 Burning (selling) is disabled</p>
-              <p>On the other hand, when the total number of tokens held by Down aligned holders is greater, only the Burning function is enabled.</p>
+              <p>If Down side holds ≥ 50% of supply → 🟥 Minting is disabled and 🟩 Burning is enabled</p>
               <p>This creates a social/PvP game where holders fight for control of the price direction using their tokens as both a financial asset and a vote.</p>
               <p className="text-xs text-muted-foreground/70 mt-2">This contract is experimental and has not been formally audited. Use at your own risk. 1% mint/burn fee.</p>
             </CardContent>
