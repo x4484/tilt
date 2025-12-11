@@ -2,6 +2,7 @@ import { ethers, BrowserProvider, Contract, formatEther, parseEther, type Eip119
 import { TILT_ABI, BASE_CHAIN_ID, BASE_RPC_URL, Side } from "@shared/schema";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
+const RPC_URL = import.meta.env.VITE_ALCHEMY_RPC_URL || BASE_RPC_URL;
 
 export function getContractAddress(): string {
   return CONTRACT_ADDRESS;
@@ -12,7 +13,7 @@ export function isContractConfigured(): boolean {
 }
 
 export async function getReadOnlyProvider(): Promise<ethers.JsonRpcProvider> {
-  return new ethers.JsonRpcProvider(BASE_RPC_URL);
+  return new ethers.JsonRpcProvider(RPC_URL);
 }
 
 export async function getProvider(ethereumProvider: Eip1193Provider): Promise<BrowserProvider> {

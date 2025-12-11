@@ -45,3 +45,4 @@ integrations = ["javascript_websocket:1.0.0"]
 
 [userenv.shared]
 VITE_CONTRACT_ADDRESS = "0x2F803DD094E65b2fD3070941c9ce6eacf4fa87d1"
+VITE_ALCHEMY_RPC_URL = "https://base-mainnet.g.alchemy.com/v2/5HLmTsHyIql0xD5axRQDx"
