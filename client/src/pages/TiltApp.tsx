@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, X, Info } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
 
 function TiltAppContent() {
   const { error, clearError, isLoading, isFarcasterReady } = useTilt();
@@ -63,11 +63,8 @@ function TiltAppContent() {
 
           <Card className="border-primary/10 bg-card/50">
             <CardContent className="p-4 text-sm text-muted-foreground space-y-2 text-left">
-              <div className="flex items-start gap-2">
-                <Info className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                <p className="font-medium text-foreground">$TILT is a bonding-curve based game on Base.</p>
-              </div>
-              <p className="pl-6">Each holder can set a preference for Up Only or Down Only.</p>
+              <p className="font-medium text-foreground">$TILT is a bonding-curve based game on Base.</p>
+              <p>Each holder can set a preference for Up Only or Down Only.</p>
               <p>When the total number of tokens held by Up aligned holders is greater, only the Minting function is enabled.</p>
               <p>On the other hand, when the total number of tokens held by Down aligned holders is greater, only the Burning function is enabled.</p>
               <p className="text-xs text-muted-foreground/70 mt-2">
