@@ -58,10 +58,14 @@ export async function fetchContractState(provider: ethers.Provider) {
 export async function fetchUserState(provider: ethers.Provider, address: string) {
   const contract = await getContract(provider);
   
+  console.log("Fetching user state for:", address);
+  
   const [balance, side] = await Promise.all([
     contract.balanceOf(address),
     contract.sides(address),
   ]);
+
+  console.log("User state from RPC:", { address, balance: balance.toString(), side: Number(side) });
 
   return {
     address,

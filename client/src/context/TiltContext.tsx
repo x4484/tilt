@@ -130,9 +130,11 @@ export function TiltProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshUserState = useCallback(async () => {
+    console.log("refreshUserState called, userAddress:", userAddress);
     if (!userAddress) return;
 
     if (!isContractConfigured()) {
+      console.log("Contract not configured, setting empty state");
       setUserState({
         address: userAddress,
         balance: "0",
@@ -142,11 +144,18 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      console.log("Fetching user state from RPC...");
       const provider = await getReadOnlyProvider();
       const state = await fetchUserState(provider, userAddress);
+      console.log("User state fetched:", state);
       setUserState(state);
     } catch (err) {
       console.error("Failed to fetch user state:", err);
+      setUserState({
+        address: userAddress,
+        balance: "0",
+        side: Side.None,
+      });
     }
   }, [userAddress]);
 
