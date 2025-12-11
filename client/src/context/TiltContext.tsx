@@ -350,7 +350,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       
       // Post activity and update leaderboard
       await postActivity('mint', amount, txHash);
-      setTimeout(() => updateLeaderboardEntry(), 500);
+      setTimeout(() => updateLeaderboardEntry(), 2000);
       
       return true;
     } catch (err) {
@@ -384,7 +384,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       
       // Post activity and update leaderboard
       await postActivity('burn', amount, txHash);
-      setTimeout(() => updateLeaderboardEntry(), 500);
+      setTimeout(() => updateLeaderboardEntry(), 2000);
       
       return true;
     } catch (err) {
@@ -419,7 +419,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       // Post activity with the new side
       const newSide = userState?.side === Side.Up ? Side.Down : Side.Up;
       await postActivity('switch', userState?.balance || '0', txHash, newSide);
-      setTimeout(() => updateLeaderboardEntry(), 500);
+      setTimeout(() => updateLeaderboardEntry(), 2000);
       
       return true;
     } catch (err) {
