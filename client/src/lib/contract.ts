@@ -103,19 +103,51 @@ export async function mint(provider: BrowserProvider, amount: string, fees: stri
     value: valueWithBuffer,
     gasLimit: 200000n // Explicit gas limit to skip estimation
   });
-  return tx.wait();
+  
+  // Try to wait for receipt, but handle providers that don't support it
+  try {
+    return await tx.wait();
+  } catch (err: unknown) {
+    // Some wallets (like Farcaster) don't support eth_getTransactionReceipt
+    const error = err as { code?: number };
+    if (error.code === 4200 || (err instanceof Error && err.message.includes('unsupported'))) {
+      console.log("Transaction submitted:", tx.hash);
+      return { hash: tx.hash, status: 1 }; // Return success with hash
+    }
+    throw err;
+  }
 }
 
 export async function burn(provider: BrowserProvider, amount: string) {
   const contract = await getSignerContract(provider);
-  const tx = await contract.burn(amount);
-  return tx.wait();
+  const tx = await contract.burn(amount, { gasLimit: 150000n });
+  
+  try {
+    return await tx.wait();
+  } catch (err: unknown) {
+    const error = err as { code?: number };
+    if (error.code === 4200 || (err instanceof Error && err.message.includes('unsupported'))) {
+      console.log("Transaction submitted:", tx.hash);
+      return { hash: tx.hash, status: 1 };
+    }
+    throw err;
+  }
 }
 
 export async function switchSides(provider: BrowserProvider) {
   const contract = await getSignerContract(provider);
-  const tx = await contract.switchSides();
-  return tx.wait();
+  const tx = await contract.switchSides({ gasLimit: 100000n });
+  
+  try {
+    return await tx.wait();
+  } catch (err: unknown) {
+    const error = err as { code?: number };
+    if (error.code === 4200 || (err instanceof Error && err.message.includes('unsupported'))) {
+      console.log("Transaction submitted:", tx.hash);
+      return { hash: tx.hash, status: 1 };
+    }
+    throw err;
+  }
 }
 
 export function truncateAddress(address: string): string {
