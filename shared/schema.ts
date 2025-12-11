@@ -79,6 +79,6 @@ export const TILT_ABI = [
 ] as const;
 
 export const BASE_CHAIN_ID = 8453;
-// Use Ankr's public Base RPC which has better rate limits
-export const BASE_RPC_URL = "https://rpc.ankr.com/base";
+// Official Base mainnet RPC
+export const BASE_RPC_URL = "https://mainnet.base.org";
 export const PLACEHOLDER_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";

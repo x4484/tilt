@@ -235,14 +235,18 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     if (isContractConfigured()) {
       try {
         const provider = await getReadOnlyProvider();
-        return await fetchMintFees(provider, amount);
+        const result = await fetchMintFees(provider, amount);
+        console.log("Mint fees from contract:", result);
+        return result;
       } catch (err) {
         console.error("Failed to get mint fees from contract, using fallback:", err);
       }
     }
     
     // Fallback to client-side calculation
-    return calculateMintFeesClientSide(amount);
+    const result = calculateMintFeesClientSide(amount);
+    console.log("Mint fees from fallback calculation:", result);
+    return result;
   }, [calculateMintFeesClientSide]);
 
   const getBurnRefunds = useCallback(async (amount: string) => {
