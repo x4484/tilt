@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount } from "@/lib/contract";
+import { composeCast } from "@/lib/farcaster";
 import { Side } from "@shared/schema";
-import { RefreshCw, TrendingUp, TrendingDown, Loader2 } from "lucide-react";
+import { RefreshCw, TrendingUp, TrendingDown, Loader2, Share2 } from "lucide-react";
 
 export function SwitchSidesCard() {
   const { userState, isConnected, isLoading, switchSides } = useTilt();
@@ -24,15 +25,34 @@ export function SwitchSidesCard() {
     }
   };
 
+  const handleShare = async () => {
+    const sideText = currentSide === Side.Up ? "Up" : "Down";
+    const formattedBalance = formatTokenAmount(balance);
+    const castText = `You are tilting ${sideText} with ${formattedBalance} $TILT\n\nhttps://tiltgame.fun/`;
+    await composeCast(castText);
+  };
+
   const targetSide = currentSide === Side.Up ? "Down" : "Up";
   const buttonVariant = currentSide === Side.Up ? "destructive" : "default";
 
   return (
     <Card className="border-primary/20 bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <RefreshCw className="w-5 h-5" />
-          Switch Sides
+        <CardTitle className="flex items-center justify-between gap-2 text-lg">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-5 h-5" />
+            Switch Sides
+          </div>
+          {isConnected && currentSide !== Side.None && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleShare}
+              data-testid="button-share-position"
+            >
+              <Share2 className="w-4 h-4" />
+            </Button>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
