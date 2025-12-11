@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount } from "@/lib/contract";
 import { useFarcasterUsers, formatDisplayName } from "@/hooks/useFarcasterUsers";
@@ -25,21 +26,9 @@ function ActivityItem({
 }) {
   const displayName = formatDisplayName(event.address, users);
   const isUsername = displayName.startsWith('@');
-
-  const getIcon = () => {
-    switch (event.type) {
-      case "mint":
-        return <div className="w-3 h-3 rounded-sm bg-primary" />;
-      case "burn":
-        return <div className="w-3 h-3 rounded-sm bg-destructive" />;
-      case "switch":
-        return event.newSide === Side.Down 
-          ? <div className="w-3 h-3 rounded-sm bg-destructive" />
-          : <div className="w-3 h-3 rounded-sm bg-primary" />;
-      default:
-        return null;
-    }
-  };
+  const userAddress = event.address.toLowerCase();
+  const user = users?.[userAddress];
+  const pfpUrl = user?.pfpUrl;
 
   const getActionText = () => {
     switch (event.type) {
@@ -54,9 +43,27 @@ function ActivityItem({
     }
   };
 
+  const getAvatarBorderColor = () => {
+    switch (event.type) {
+      case "mint":
+        return "ring-primary";
+      case "burn":
+        return "ring-destructive";
+      case "switch":
+        return event.newSide === Side.Down ? "ring-destructive" : "ring-primary";
+      default:
+        return "ring-primary";
+    }
+  };
+
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-      {getIcon()}
+      <Avatar className={`w-6 h-6 ring-2 ${getAvatarBorderColor()}`}>
+        {pfpUrl && <AvatarImage src={pfpUrl} alt={displayName} />}
+        <AvatarFallback className="bg-muted text-xs">
+          {displayName.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
       <div className="flex-1 min-w-0">
         <span className={`text-sm ${isUsername ? 'text-primary' : 'font-mono'}`}>{displayName}</span>
         <span className="text-muted-foreground text-sm ml-2">

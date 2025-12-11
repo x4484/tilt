@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount } from "@/lib/contract";
 import { useFarcasterUsers, formatDisplayName } from "@/hooks/useFarcasterUsers";
@@ -19,12 +20,18 @@ function LeaderboardItem({
 }) {
   const displayName = formatDisplayName(entry.address, users);
   const isUsername = displayName.startsWith('@');
+  const userAddress = entry.address.toLowerCase();
+  const user = users?.[userAddress];
+  const pfpUrl = user?.pfpUrl;
   
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-      <div 
-        className={`w-3 h-3 rounded-sm ${side === Side.Up ? "bg-primary" : "bg-destructive"}`}
-      />
+      <Avatar className={`w-6 h-6 ring-2 ${side === Side.Up ? "ring-primary" : "ring-destructive"}`}>
+        {pfpUrl && <AvatarImage src={pfpUrl} alt={displayName} />}
+        <AvatarFallback className="bg-muted text-xs">
+          {displayName.slice(0, 2).toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
       <span className={`text-sm flex-1 ${isUsername ? 'text-primary' : 'font-mono'}`}>
         {displayName}
       </span>
