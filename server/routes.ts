@@ -136,14 +136,15 @@ export async function registerRoutes(
     res.json({ status: 'ok', timestamp: Date.now() });
   });
 
-  // Debug endpoint to test user state fetch from blockchain
-  app.get('/api/debug/user/:address', async (req, res) => {
+  // Get user state from blockchain (production-ready endpoint)
+  app.get('/api/contract/user/:address', async (req, res) => {
     const { address } = req.params;
     try {
       const { fetchUserStateFromChain } = await import('./blockchain');
       const state = await fetchUserStateFromChain(address);
       res.json({ address, ...state });
     } catch (error) {
+      console.error('Failed to fetch user state:', error);
       res.status(500).json({ error: String(error) });
     }
   });

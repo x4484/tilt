@@ -143,7 +143,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
 
     try {
       // Use server API to fetch user state (more reliable than direct RPC from browser)
-      const response = await fetch(`/api/debug/user/${userAddress}`);
+      const response = await fetch(`/api/contract/user/${userAddress}`);
       if (response.ok) {
         const data = await response.json();
         console.log("User state from server API:", data);
