@@ -63,7 +63,7 @@ function TiltAppContent() {
 
           <Card className="border-primary/10 bg-card/50">
             <CardContent className="p-4 text-sm text-muted-foreground space-y-2 text-left">
-              <p className="font-medium text-foreground">$TILT is a bonding-curve based game on Base.</p>
+              <p className="font-medium text-foreground">$TILT is a bonding-curve token game on Base where holders vote on the direction of the market.</p>
               <p>Each holder can set a preference for Up Only or Down Only.</p>
               <p>When the total number of tokens held by Up aligned holders is greater, only the Minting function is enabled.</p>
               <p>On the other hand, when the total number of tokens held by Down aligned holders is greater, only the Burning function is enabled.</p>
