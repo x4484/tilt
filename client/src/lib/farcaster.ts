@@ -192,3 +192,13 @@ export async function composeCast(text: string): Promise<void> {
     console.error("Failed to compose cast:", error);
   }
 }
+
+export async function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'soft' | 'rigid'): Promise<void> {
+  try {
+    if (isMiniApp() && sdk.haptics?.impactOccurred) {
+      await sdk.haptics.impactOccurred(type);
+    }
+  } catch (error) {
+    console.error("Failed to trigger haptic:", error);
+  }
+}

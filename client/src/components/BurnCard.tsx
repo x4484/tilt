@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTilt } from "@/context/TiltContext";
 import { formatEthAmount } from "@/lib/contract";
+import { triggerHaptic } from "@/lib/farcaster";
 import { Flame, Lock, Loader2 } from "lucide-react";
 
 export function BurnCard() {
@@ -37,6 +38,7 @@ export function BurnCard() {
   const handleBurn = async () => {
     if (!amount) return;
 
+    triggerHaptic('medium');
     setIsBurning(true);
     try {
       await burn(amount);

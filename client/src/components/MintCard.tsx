@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTilt } from "@/context/TiltContext";
 import { formatEthAmount } from "@/lib/contract";
+import { triggerHaptic } from "@/lib/farcaster";
 import { Plus, Lock, Loader2 } from "lucide-react";
 
 export function MintCard() {
@@ -35,6 +36,7 @@ export function MintCard() {
   const handleMint = async () => {
     if (!fees || !amount) return;
 
+    triggerHaptic('light');
     setIsMinting(true);
     try {
       await mint(amount, fees);

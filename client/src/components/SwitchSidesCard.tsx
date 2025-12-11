@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount } from "@/lib/contract";
-import { composeCast } from "@/lib/farcaster";
+import { composeCast, triggerHaptic } from "@/lib/farcaster";
 import { Side } from "@shared/schema";
 import { RefreshCw, TrendingUp, TrendingDown, Loader2, Share2 } from "lucide-react";
 
@@ -17,6 +17,7 @@ export function SwitchSidesCard() {
   const canSwitch = isConnected && !isLoading && !isSwitching && currentSide !== Side.None;
 
   const handleSwitch = async () => {
+    triggerHaptic('rigid');
     setIsSwitching(true);
     try {
       await switchSides();
