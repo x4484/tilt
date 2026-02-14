@@ -77,9 +77,14 @@ export function BurnCard() {
         </div>
 
         {isUpOnly ? (
-          <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground">
-            <Lock className="w-4 h-4" />
-            <span className="text-sm font-medium">BURNING LOCKED!</span>
+          <div className="space-y-1 py-3 text-center text-muted-foreground">
+            <div className="flex items-center justify-center gap-2">
+              <Lock className="w-4 h-4" />
+              <span className="text-sm font-medium">BURNING LOCKED!</span>
+            </div>
+            <p className="text-xs">
+              Humans control the majority. Switch to Agents to unlock burning.
+            </p>
           </div>
         ) : null}
 

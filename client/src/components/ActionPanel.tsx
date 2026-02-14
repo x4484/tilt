@@ -71,9 +71,14 @@ function MintForm() {
       </div>
 
       {!isUpOnly && (
-        <div className="flex items-center justify-center gap-2 py-3 text-destructive">
-          <Lock className="h-4 w-4" />
-          <span className="text-sm font-medium">MINTING LOCKED!</span>
+        <div className="space-y-1 py-3 text-center text-destructive">
+          <div className="flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4" />
+            <span className="text-sm font-medium">MINTING LOCKED!</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Agents control the majority. Switch to Humans to unlock minting.
+          </p>
         </div>
       )}
 
@@ -178,9 +183,14 @@ function BurnForm() {
       </div>
 
       {isUpOnly && (
-        <div className="flex items-center justify-center gap-2 py-3 text-muted-foreground">
-          <Lock className="h-4 w-4" />
-          <span className="text-sm font-medium">BURNING LOCKED!</span>
+        <div className="space-y-1 py-3 text-center text-muted-foreground">
+          <div className="flex items-center justify-center gap-2">
+            <Lock className="h-4 w-4" />
+            <span className="text-sm font-medium">BURNING LOCKED!</span>
+          </div>
+          <p className="text-xs">
+            Humans control the majority. Switch to Agents to unlock burning.
+          </p>
         </div>
       )}
 

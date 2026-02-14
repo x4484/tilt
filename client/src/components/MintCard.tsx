@@ -74,9 +74,14 @@ export function MintCard() {
         </div>
 
         {!isUpOnly ? (
-          <div className="flex items-center justify-center gap-2 py-3 text-destructive">
-            <Lock className="w-4 h-4" />
-            <span className="text-sm font-medium">MINTING LOCKED!</span>
+          <div className="space-y-1 py-3 text-center text-destructive">
+            <div className="flex items-center justify-center gap-2">
+              <Lock className="w-4 h-4" />
+              <span className="text-sm font-medium">MINTING LOCKED!</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Agents control the majority. Switch to Humans to unlock minting.
+            </p>
           </div>
         ) : null}
 
