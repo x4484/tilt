@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount, formatEthAmount } from "@/lib/contract";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { User, Bot } from "lucide-react";
 
 export function MarketOverview() {
   const { contractState, isLoading } = useTilt();
@@ -83,7 +83,7 @@ export function MarketOverview() {
             >
               {upPct >= 15 && (
                 <span className="flex items-center gap-1 text-xs font-bold text-black">
-                  <TrendingUp className="h-3 w-3" />
+                  <User className="h-3 w-3" />
                   {upPct}%
                 </span>
               )}
@@ -98,7 +98,7 @@ export function MarketOverview() {
             >
               {downPct >= 15 && (
                 <span className="flex items-center gap-1 text-xs font-bold text-white">
-                  <TrendingDown className="h-3 w-3" />
+                  <Bot className="h-3 w-3" />
                   {downPct}%
                 </span>
               )}
@@ -106,16 +106,16 @@ export function MarketOverview() {
           </div>
           <div className="mt-2 flex justify-between text-xs text-muted-foreground">
             <span>
-              UP: {formatTokenAmount(ups)} ({upPct}%)
+              HUMANS: {formatTokenAmount(ups)} ({upPct}%)
             </span>
             <span>
-              DOWN: {formatTokenAmount(downsNum.toString())} ({downPct}%)
+              AGENTS: {formatTokenAmount(downsNum.toString())} ({downPct}%)
             </span>
           </div>
         </div>
 
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Mint $TILT on a bonding curve, pick a side — Up or Down — and
+          Mint $TILT on a bonding curve, pick a side — Humans or Agents — and
           switch to shift the market. Price rises with supply. Burn
           tokens anytime to reclaim ETH.
         </p>

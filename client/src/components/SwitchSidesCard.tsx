@@ -6,7 +6,7 @@ import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount } from "@/lib/contract";
 import { composeCast, triggerHaptic } from "@/lib/farcaster";
 import { Side } from "@shared/schema";
-import { RefreshCw, TrendingUp, TrendingDown, Loader2, Share2 } from "lucide-react";
+import { RefreshCw, User, Bot, Loader2, Share2 } from "lucide-react";
 
 export function SwitchSidesCard() {
   const { userState, isConnected, isLoading, switchSides } = useTilt();
@@ -27,14 +27,14 @@ export function SwitchSidesCard() {
   };
 
   const handleShare = async () => {
-    const sideText = currentSide === Side.Up ? "Up" : "Down";
+    const sideText = currentSide === Side.Human ? "Humans" : "Agents";
     const formattedBalance = formatTokenAmount(balance);
     const castText = `I am tilting ${sideText} with ${formattedBalance} $TILT\n\nhttps://tiltgame.fun`;
     await composeCast(castText);
   };
 
-  const targetSide = currentSide === Side.Up ? "Down" : "Up";
-  const buttonVariant = currentSide === Side.Up ? "destructive" : "default";
+  const targetSide = currentSide === Side.Human ? "Agents" : "Humans";
+  const buttonVariant = currentSide === Side.Human ? "destructive" : "default";
 
   return (
     <Card className="border-primary/20 bg-card/80">
@@ -61,16 +61,16 @@ export function SwitchSidesCard() {
           <>
             <div className="flex items-center justify-center gap-3">
               <span className="text-sm text-muted-foreground">You are tilting</span>
-              <Badge 
-                variant={currentSide === Side.Up ? "default" : "destructive"}
+              <Badge
+                variant={currentSide === Side.Human ? "default" : "destructive"}
                 className="flex items-center gap-1"
               >
-                {currentSide === Side.Up ? (
-                  <TrendingUp className="w-3 h-3" />
+                {currentSide === Side.Human ? (
+                  <User className="w-3 h-3" />
                 ) : (
-                  <TrendingDown className="w-3 h-3" />
+                  <Bot className="w-3 h-3" />
                 )}
-                {currentSide === Side.Up ? "Up" : "Down"}
+                {currentSide === Side.Human ? "Humans" : "Agents"}
               </Badge>
               <span className="text-sm text-muted-foreground">with</span>
               <span className="font-mono font-bold">{formatTokenAmount(balance)} $TILT</span>

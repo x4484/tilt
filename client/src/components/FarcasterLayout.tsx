@@ -56,15 +56,15 @@ export function FarcasterLayout() {
                 the refund for burning tokens.
               </p>
               <p>
-                Each token holder can set a preference for Up Only or Down
+                Each token holder can set a preference for Humans Only or Agents
                 Only.
               </p>
               <p>
-                If Up side holds &ge; 50% of supply &rarr; Minting (buying)
+                If Humans side holds &ge; 50% of supply &rarr; Minting (buying)
                 is enabled and Burning (selling) is disabled
               </p>
               <p>
-                If Down side holds &ge; 50% of supply &rarr; Minting
+                If Agents side holds &ge; 50% of supply &rarr; Minting
                 (buying) is disabled and Burning (selling) is enabled
               </p>
               <p>

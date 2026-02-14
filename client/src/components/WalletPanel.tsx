@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTilt } from "@/context/TiltContext";
 import { truncateAddress, formatTokenAmount } from "@/lib/contract";
 import { Side } from "@shared/schema";
-import { Wallet, Copy, Check, TrendingUp, TrendingDown, AlertCircle, X } from "lucide-react";
+import { Wallet, Copy, Check, User, Bot, AlertCircle, X } from "lucide-react";
 import { useState } from "react";
 
 export function WalletPanel() {
@@ -51,8 +51,8 @@ export function WalletPanel() {
     );
   }
 
-  const sideLabel = userState?.side === Side.Up ? "UP" : userState?.side === Side.Down ? "DOWN" : "NONE";
-  const sideVariant = userState?.side === Side.Up ? "default" : userState?.side === Side.Down ? "destructive" : "secondary";
+  const sideLabel = userState?.side === Side.Human ? "HUMAN" : userState?.side === Side.Agent ? "AGENT" : "NONE";
+  const sideVariant = userState?.side === Side.Human ? "default" : userState?.side === Side.Agent ? "destructive" : "secondary";
 
   return (
     <Card className="border-primary/30 bg-card/80">
@@ -94,10 +94,10 @@ export function WalletPanel() {
             </div>
 
             <Badge variant={sideVariant} className="flex items-center gap-1" data-testid="badge-user-side">
-              {userState?.side === Side.Up ? (
-                <TrendingUp className="w-3 h-3" />
-              ) : userState?.side === Side.Down ? (
-                <TrendingDown className="w-3 h-3" />
+              {userState?.side === Side.Human ? (
+                <User className="w-3 h-3" />
+              ) : userState?.side === Side.Agent ? (
+                <Bot className="w-3 h-3" />
               ) : null}
               {sideLabel}
             </Badge>

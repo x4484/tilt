@@ -37,7 +37,7 @@ function ActivityItem({
       case "burn":
         return "burned";
       case "switch":
-        return `tilted ${formatTokenAmount(event.amount)} ${event.newSide === Side.Down ? "Down" : "Up"}`;
+        return `switched to ${event.newSide === Side.Agent ? "Agents" : "Humans"}`;
       default:
         return "";
     }
@@ -50,7 +50,7 @@ function ActivityItem({
       case "burn":
         return "ring-destructive";
       case "switch":
-        return event.newSide === Side.Down ? "ring-destructive" : "ring-primary";
+        return event.newSide === Side.Agent ? "ring-destructive" : "ring-primary";
       default:
         return "ring-primary";
     }

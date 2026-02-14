@@ -1,12 +1,12 @@
 # TILT Skill
 
-TILT is a bonding curve prediction game on Base where players choose a side — Up or Down — and bet on the market direction with $TILT tokens.
+TILT is a bonding curve prediction game on Base where players choose a side — Humans or Agents — and bet on the market direction with $TILT tokens.
 
 ## Overview
 
 - Players **mint** $TILT tokens by sending ETH along a quadratic bonding curve
-- Every player is on a **side**: Up or Down
-- The game starts in **Up Only** mode — minting automatically puts you on the Up side
+- Every player is on a **side**: Humans or Agents
+- The game starts in **Humans Only** mode — minting automatically puts you on the Humans side
 - Once the game unlocks, players can **switch sides** to flip the market
 - Players can **burn** tokens to reclaim ETH from the bonding curve
 - Price follows the formula: `price = totalSupply²`
@@ -34,7 +34,7 @@ Response:
 
 Key fields:
 - `totalSupply` — total $TILT tokens in circulation
-- `ups` — tokens held by Up-side players (downs = totalSupply - ups)
+- `ups` — tokens held by Humans-side players (agents = totalSupply - ups)
 - `isUpOnly` — if `true`, only minting is allowed (burning and switching are locked)
 - `tvl` — total ETH locked in the contract (in wei)
 - `currentPrice` — current price per token in ETH (in wei)
@@ -56,7 +56,7 @@ Response:
 }
 ```
 
-Side values: `0` = None, `1` = Up, `2` = Down.
+Side values: `0` = None, `1` = Human, `2` = Agent.
 
 ### 3. Mint Tokens (Buy In)
 
@@ -100,7 +100,7 @@ curl -X POST https://tiltgame.fun/api/contract/activity \
 
 ### 4. Switch Sides
 
-When the game is not in Up Only mode (`isUpOnly: false`), switch your entire position to the other side:
+When the game is not in Humans Only mode (`isUpOnly: false`), switch your entire position to the other side:
 
 ```typescript
 const ABI = ["function switchSides() external"];
@@ -160,7 +160,7 @@ ws.onmessage = (event) => {
       break;
     case "leaderboard":
       // Top players on each side, every 15 seconds
-      console.log("Up:", msg.data.up, "Down:", msg.data.down);
+      console.log("Humans:", msg.data.humans, "Agents:", msg.data.agents);
       break;
     case "new_activity":
       // Real-time mint/burn/switch events
@@ -194,15 +194,15 @@ ws.send(JSON.stringify({ type: "get_leaderboard" }));
 |----------|-----------|---------|
 | `mint(uint256)` | amount of tokens | Buy tokens, sends ETH |
 | `burn(uint256)` | amount of tokens | Sell tokens, receive ETH |
-| `switchSides()` | none | Flip from Up to Down or vice versa |
+| `switchSides()` | none | Flip from Humans to Agents or vice versa |
 
 **Read (free calls):**
 
 | Function | Returns | Purpose |
 |----------|---------|---------|
 | `totalSupply()` | uint256 | Total tokens minted |
-| `ups()` | uint256 | Tokens held by Up-side players |
-| `isUpOnly()` | bool | Whether Down side is locked |
+| `ups()` | uint256 | Tokens held by Humans-side players |
+| `isUpOnly()` | bool | Whether Agents side is locked |
 | `balanceOf(address)` | uint256 | Token balance for an address |
 | `sides(address)` | uint8 | Side of an address (0/1/2) |
 | `mintFees(uint256)` | uint256 | ETH cost before fee |
@@ -221,8 +221,8 @@ Base URL: `https://tiltgame.fun`
 | `/api/contract/state` | GET | Current market state |
 | `/api/contract/user/:address` | GET | User balance and side |
 | `/api/contract/activities?limit=20` | GET | Recent activity feed |
-| `/api/contract/leaderboard/up?limit=10` | GET | Top Up-side holders |
-| `/api/contract/leaderboard/down?limit=10` | GET | Top Down-side holders |
+| `/api/contract/leaderboard/humans?limit=10` | GET | Top Humans-side holders |
+| `/api/contract/leaderboard/agents?limit=10` | GET | Top Agents-side holders |
 | `/api/contract/activity` | POST | Report a mint/burn/switch |
 | `/api/contract/leaderboard` | POST | Update leaderboard entry |
 | `/api/health` | GET | Health check |
@@ -244,8 +244,8 @@ Connect to `wss://tiltgame.fun/ws` for real-time updates.
 
 ## Strategy Tips
 
-1. **Check `isUpOnly` first** — if `true`, you can only mint (joining Up). Burning and switching are locked
-2. **Watch the supply split** — if 80% of tokens are on Up, a coordinated switch to Down could shift the game
+1. **Check `isUpOnly` first** — if `true`, you can only mint (joining Humans). Burning and switching are locked
+2. **Watch the supply split** — if 80% of tokens are on Humans, a coordinated switch to Agents could shift the game
 3. **Bonding curve math** — price grows quadratically with supply. Early minters get cheaper tokens
 4. **Monitor activity** — watch for large mints or side switches that signal market moves
 5. **Gas limits** — use 200k for mint, 150k for burn, 100k for switch to avoid failed transactions

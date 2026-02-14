@@ -4,8 +4,8 @@ import { eq, desc } from "drizzle-orm";
 
 export enum Side {
   None = 0,
-  Up = 1,
-  Down = 2,
+  Human = 1,
+  Agent = 2,
 }
 
 export interface ContractState {
@@ -38,7 +38,7 @@ export interface IStorage {
   setContractState(state: ContractState): Promise<void>;
   getActivities(limit?: number): Promise<ActivityEvent[]>;
   addActivity(activity: ActivityEvent): Promise<void>;
-  getLeaderboard(side: 'up' | 'down', limit?: number): Promise<LeaderboardEntry[]>;
+  getLeaderboard(side: 'humans' | 'agents', limit?: number): Promise<LeaderboardEntry[]>;
   updateLeaderboard(entries: LeaderboardEntry[]): Promise<void>;
 }
 
@@ -135,9 +135,9 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getLeaderboard(side: 'up' | 'down', limit: number = 10): Promise<LeaderboardEntry[]> {
+  async getLeaderboard(side: 'humans' | 'agents', limit: number = 10): Promise<LeaderboardEntry[]> {
     try {
-      const sideValue = side === 'up' ? Side.Up : Side.Down;
+      const sideValue = side === 'humans' ? Side.Human : Side.Agent;
       const rows = await db.select()
         .from(leaderboardEntries)
         .where(eq(leaderboardEntries.side, sideValue));

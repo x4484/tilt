@@ -50,8 +50,8 @@ interface TiltContextType {
   contractState: ContractState | null;
   userState: UserState | null;
   activities: ActivityEvent[];
-  upLeaderboard: LeaderboardEntry[];
-  downLeaderboard: LeaderboardEntry[];
+  humanLeaderboard: LeaderboardEntry[];
+  agentLeaderboard: LeaderboardEntry[];
   error: string | null;
   connect: () => Promise<void>;
   refreshContractState: () => Promise<void>;
@@ -89,8 +89,8 @@ export function TiltProvider({ children }: { children: ReactNode }) {
   );
   const [userState, setUserState] = useState<UserState | null>(null);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
-  const [upLeaderboard, setUpLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [downLeaderboard, setDownLeaderboard] = useState<LeaderboardEntry[]>(
+  const [humanLeaderboard, setHumanLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [agentLeaderboard, setAgentLeaderboard] = useState<LeaderboardEntry[]>(
     [],
   );
   const [error, setError] = useState<string | null>(null);
@@ -122,11 +122,11 @@ export function TiltProvider({ children }: { children: ReactNode }) {
 
   const fetchDataFromApi = useCallback(async () => {
     try {
-      const [stateRes, activitiesRes, upRes, downRes] = await Promise.all([
+      const [stateRes, activitiesRes, humansRes, agentsRes] = await Promise.all([
         fetch("/api/contract/state"),
         fetch("/api/contract/activities?limit=20"),
-        fetch("/api/contract/leaderboard/up?limit=10"),
-        fetch("/api/contract/leaderboard/down?limit=10"),
+        fetch("/api/contract/leaderboard/humans?limit=10"),
+        fetch("/api/contract/leaderboard/agents?limit=10"),
       ]);
 
       if (stateRes.ok) {
@@ -137,13 +137,13 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         const acts = await activitiesRes.json();
         setActivities(acts);
       }
-      if (upRes.ok) {
-        const up = await upRes.json();
-        setUpLeaderboard(up);
+      if (humansRes.ok) {
+        const humans = await humansRes.json();
+        setHumanLeaderboard(humans);
       }
-      if (downRes.ok) {
-        const down = await downRes.json();
-        setDownLeaderboard(down);
+      if (agentsRes.ok) {
+        const agents = await agentsRes.json();
+        setAgentLeaderboard(agents);
       }
     } catch (err) {
       console.error("Failed to fetch data from API:", err);
@@ -154,8 +154,8 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     if (!isContractConfigured()) {
       setContractState(EMPTY_CONTRACT_STATE);
       setActivities([]);
-      setUpLeaderboard([]);
-      setDownLeaderboard([]);
+      setHumanLeaderboard([]);
+      setAgentLeaderboard([]);
       return;
     }
 
@@ -402,18 +402,18 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         }),
       });
 
-      const [upRes, downRes] = await Promise.all([
-        fetch("/api/contract/leaderboard/up?limit=10"),
-        fetch("/api/contract/leaderboard/down?limit=10"),
+      const [humansRes, agentsRes] = await Promise.all([
+        fetch("/api/contract/leaderboard/humans?limit=10"),
+        fetch("/api/contract/leaderboard/agents?limit=10"),
       ]);
 
-      if (upRes.ok) {
-        const up = await upRes.json();
-        setUpLeaderboard(up);
+      if (humansRes.ok) {
+        const humans = await humansRes.json();
+        setHumanLeaderboard(humans);
       }
-      if (downRes.ok) {
-        const down = await downRes.json();
-        setDownLeaderboard(down);
+      if (agentsRes.ok) {
+        const agents = await agentsRes.json();
+        setAgentLeaderboard(agents);
       }
     } catch (err) {
       console.error("Failed to update leaderboard:", err);
@@ -532,7 +532,7 @@ export function TiltProvider({ children }: { children: ReactNode }) {
       await refreshUserState();
 
       const newSide =
-        userState?.side === Side.Up ? Side.Down : Side.Up;
+        userState?.side === Side.Human ? Side.Agent : Side.Human;
       await postActivity(
         "switch",
         userState?.balance || "0",
@@ -656,12 +656,12 @@ export function TiltProvider({ children }: { children: ReactNode }) {
                 break;
               case "leaderboard":
                 if (message.data) {
-                  const { up, down } = message.data as {
-                    up: LeaderboardEntry[];
-                    down: LeaderboardEntry[];
+                  const { humans, agents } = message.data as {
+                    humans: LeaderboardEntry[];
+                    agents: LeaderboardEntry[];
                   };
-                  if (up) setUpLeaderboard(up);
-                  if (down) setDownLeaderboard(down);
+                  if (humans) setHumanLeaderboard(humans);
+                  if (agents) setAgentLeaderboard(agents);
                 }
                 break;
             }
@@ -718,8 +718,8 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         contractState,
         userState,
         activities,
-        upLeaderboard,
-        downLeaderboard,
+        humanLeaderboard,
+        agentLeaderboard,
         error,
         connect,
         refreshContractState,

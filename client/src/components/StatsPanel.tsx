@@ -2,7 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTilt } from "@/context/TiltContext";
 import { formatTokenAmount, formatEthAmount } from "@/lib/contract";
-import { TrendingUp, TrendingDown, Coins, Lock } from "lucide-react";
+import { User, Bot, Coins, Lock } from "lucide-react";
 
 export function StatsPanel() {
   const { contractState, isLoading } = useTilt();
@@ -41,13 +41,13 @@ export function StatsPanel() {
             >
               {isUpOnly ? (
                 <>
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  {upPercentage}% UP ONLY
+                  <User className="w-4 h-4 mr-2" />
+                  {upPercentage}% HUMANS ONLY
                 </>
               ) : (
                 <>
-                  <TrendingDown className="w-4 h-4 mr-2" />
-                  {100 - upPercentage}% DOWN ONLY
+                  <Bot className="w-4 h-4 mr-2" />
+                  {100 - upPercentage}% AGENTS ONLY
                 </>
               )}
             </Badge>
@@ -100,8 +100,8 @@ export function StatsPanel() {
         />
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
-        <span>UP: {formatTokenAmount(ups)}</span>
-        <span>DOWN: {formatTokenAmount((totalNum - upsNum).toString())}</span>
+        <span>HUMANS: {formatTokenAmount(ups)}</span>
+        <span>AGENTS: {formatTokenAmount((totalNum - upsNum).toString())}</span>
       </div>
     </div>
   );

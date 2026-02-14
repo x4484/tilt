@@ -10,8 +10,8 @@ import {
   Wallet,
   Copy,
   Check,
-  TrendingUp,
-  TrendingDown,
+  User,
+  Bot,
   RefreshCw,
   Loader2,
   Share2,
@@ -47,7 +47,7 @@ export function PositionCard() {
   };
 
   const handleShare = async () => {
-    const sideText = currentSide === Side.Up ? "Up" : "Down";
+    const sideText = currentSide === Side.Human ? "Humans" : "Agents";
     const formattedBalance = formatTokenAmount(balance);
     const castText = `I am tilting ${sideText} with ${formattedBalance} $TILT\n\nhttps://tiltgame.fun`;
     await composeCast(castText);
@@ -79,20 +79,20 @@ export function PositionCard() {
   }
 
   const sideLabel =
-    currentSide === Side.Up
-      ? "UP"
-      : currentSide === Side.Down
-        ? "DOWN"
+    currentSide === Side.Human
+      ? "HUMAN"
+      : currentSide === Side.Agent
+        ? "AGENT"
         : "NONE";
   const sideVariant =
-    currentSide === Side.Up
+    currentSide === Side.Human
       ? "default"
-      : currentSide === Side.Down
+      : currentSide === Side.Agent
         ? "destructive"
         : "secondary";
-  const targetSide = currentSide === Side.Up ? "Down" : "Up";
+  const targetSide = currentSide === Side.Human ? "Agents" : "Humans";
   const switchVariant =
-    currentSide === Side.Up ? "destructive" : "default";
+    currentSide === Side.Human ? "destructive" : "default";
 
   return (
     <Card className="border-primary/20 bg-card/80">
@@ -159,10 +159,10 @@ export function PositionCard() {
               className="flex items-center gap-1"
               data-testid="badge-user-side"
             >
-              {currentSide === Side.Up ? (
-                <TrendingUp className="h-3 w-3" />
-              ) : currentSide === Side.Down ? (
-                <TrendingDown className="h-3 w-3" />
+              {currentSide === Side.Human ? (
+                <User className="h-3 w-3" />
+              ) : currentSide === Side.Agent ? (
+                <Bot className="h-3 w-3" />
               ) : null}
               {sideLabel}
             </Badge>
@@ -193,7 +193,7 @@ export function PositionCard() {
 
         {currentSide === Side.None && (
           <p className="text-center text-sm text-muted-foreground">
-            Your first mint puts you on UP. Switch later to change the
+            Your first mint puts you on HUMANS. Switch later to change the
             market.
           </p>
         )}

@@ -51,13 +51,13 @@ export async function registerRoutes(
 
     const sendLeaderboard = async () => {
       if (ws.readyState === WebSocket.OPEN) {
-        const [up, down] = await Promise.all([
-          storage.getLeaderboard('up'),
-          storage.getLeaderboard('down'),
+        const [humans, agents] = await Promise.all([
+          storage.getLeaderboard('humans'),
+          storage.getLeaderboard('agents'),
         ]);
         ws.send(JSON.stringify({
           type: 'leaderboard',
-          data: { up, down },
+          data: { humans, agents },
         }));
       }
     };
@@ -118,13 +118,13 @@ export async function registerRoutes(
 
   // Broadcast leaderboard every 15 seconds
   setInterval(async () => {
-    const [up, down] = await Promise.all([
-      storage.getLeaderboard('up'),
-      storage.getLeaderboard('down'),
+    const [humans, agents] = await Promise.all([
+      storage.getLeaderboard('humans'),
+      storage.getLeaderboard('agents'),
     ]);
     broadcast({
       type: 'leaderboard',
-      data: { up, down },
+      data: { humans, agents },
     });
   }, 15000);
 
@@ -140,8 +140,8 @@ export async function registerRoutes(
   });
 
   app.get('/api/contract/leaderboard/:side', async (req, res) => {
-    const side = req.params.side as 'up' | 'down';
-    if (side !== 'up' && side !== 'down') {
+    const side = req.params.side as 'humans' | 'agents';
+    if (side !== 'humans' && side !== 'agents') {
       return res.status(400).json({ error: 'Invalid side parameter' });
     }
     const limit = parseInt(req.query.limit as string) || 10;
@@ -305,15 +305,15 @@ export async function registerRoutes(
       }]);
       
       // Broadcast updated leaderboard and fresh contract state from chain
-      const [up, down, state] = await Promise.all([
-        storage.getLeaderboard('up'),
-        storage.getLeaderboard('down'),
+      const [humans, agents, state] = await Promise.all([
+        storage.getLeaderboard('humans'),
+        storage.getLeaderboard('agents'),
         fetchContractStateFromChain(),
       ]);
-      
+
       broadcast({
         type: 'leaderboard',
-        data: { up, down },
+        data: { humans, agents },
       });
       
       broadcast({

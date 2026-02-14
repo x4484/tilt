@@ -7,7 +7,7 @@ import { formatTokenAmount } from "@/lib/contract";
 import { useFarcasterUsers, formatDisplayName } from "@/hooks/useFarcasterUsers";
 import { Side } from "@shared/schema";
 import type { LeaderboardEntry } from "@shared/schema";
-import { Trophy, TrendingUp, TrendingDown } from "lucide-react";
+import { Trophy, User, Bot } from "lucide-react";
 
 function LeaderboardItem({ 
   entry, 
@@ -26,7 +26,7 @@ function LeaderboardItem({
   
   return (
     <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-      <Avatar className={`w-6 h-6 ring-2 ${side === Side.Up ? "ring-primary" : "ring-destructive"}`}>
+      <Avatar className={`w-6 h-6 ring-2 ${side === Side.Human ? "ring-primary" : "ring-destructive"}`}>
         {pfpUrl && <AvatarImage src={pfpUrl} alt={displayName} />}
         <AvatarFallback className="bg-muted text-xs">
           {displayName.slice(0, 2).toUpperCase()}
@@ -47,10 +47,10 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ className }: LeaderboardProps) {
-  const { upLeaderboard, downLeaderboard, contractState, isLoading } = useTilt();
+  const { humanLeaderboard, agentLeaderboard, contractState, isLoading } = useTilt();
 
   // Collect all addresses to resolve
-  const allAddresses = [...upLeaderboard, ...downLeaderboard].map(e => e.address);
+  const allAddresses = [...humanLeaderboard, ...agentLeaderboard].map(e => e.address);
   const { data: users } = useFarcasterUsers(allAddresses);
 
   const totalSupply = parseInt(contractState?.totalSupply || "0", 10);
@@ -60,16 +60,16 @@ export function Leaderboard({ className }: LeaderboardProps) {
   const upPercentage = totalSupply > 0 ? Math.round((ups / totalSupply) * 100) : 0;
   const downPercentage = totalSupply > 0 ? Math.round((downs / totalSupply) * 100) : 0;
 
-  const upStats = {
+  const humanStats = {
     percentage: upPercentage,
     total: formatTokenAmount(ups.toString()),
-    players: upLeaderboard.length,
+    players: humanLeaderboard.length,
   };
 
-  const downStats = {
+  const agentStats = {
     percentage: downPercentage,
     total: formatTokenAmount(downs.toString()),
-    players: downLeaderboard.length,
+    players: agentLeaderboard.length,
   };
 
   return (
@@ -77,74 +77,74 @@ export function Leaderboard({ className }: LeaderboardProps) {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
           <Trophy className="w-4 h-4 text-[hsl(var(--primary-muted))]" />
-          Top Tilters
+          Leaderboard
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <Tabs defaultValue="up" className="w-full">
+        <Tabs defaultValue="humans" className="w-full">
           <TabsList className="mx-4 mt-2 grid w-auto grid-cols-2 bg-muted/50">
             <TabsTrigger
-              value="up"
+              value="humans"
               className="gap-1.5 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
-              data-testid="tab-up-tilters"
+              data-testid="tab-humans"
             >
-              <TrendingUp className="h-3 w-3" />
-              Up
+              <User className="h-3 w-3" />
+              Humans
             </TabsTrigger>
             <TabsTrigger
-              value="down"
+              value="agents"
               className="gap-1.5 text-xs data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive"
-              data-testid="tab-down-tilters"
+              data-testid="tab-agents"
             >
-              <TrendingDown className="h-3 w-3" />
-              Down
+              <Bot className="h-3 w-3" />
+              Agents
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="up" className="m-0">
+          <TabsContent value="humans" className="m-0">
             <div className="px-4 py-2 border-b border-border/30 text-xs text-muted-foreground">
-              {upStats.percentage}% : {upStats.total} TILT : {upStats.players} players
+              {humanStats.percentage}% : {humanStats.total} TILT : {humanStats.players} players
             </div>
             <ScrollArea className={`px-4 ${className ?? "h-[250px]"}`}>
-              {isLoading && upLeaderboard.length === 0 ? (
+              {isLoading && humanLeaderboard.length === 0 ? (
                 <div className="space-y-2 py-2">
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="h-8 bg-muted/30 rounded animate-pulse" />
                   ))}
                 </div>
-              ) : upLeaderboard.length === 0 ? (
+              ) : humanLeaderboard.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm py-8">
-                  No up tilters yet
+                  No humans yet
                 </div>
               ) : (
                 <div className="py-2">
-                  {upLeaderboard.map((entry) => (
-                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Up} users={users} />
+                  {humanLeaderboard.map((entry) => (
+                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Human} users={users} />
                   ))}
                 </div>
               )}
             </ScrollArea>
           </TabsContent>
 
-          <TabsContent value="down" className="m-0">
+          <TabsContent value="agents" className="m-0">
             <div className="px-4 py-2 border-b border-border/30 text-xs text-muted-foreground">
-              {downStats.percentage}% : {downStats.total} TILT : {downStats.players} players
+              {agentStats.percentage}% : {agentStats.total} TILT : {agentStats.players} players
             </div>
             <ScrollArea className={`px-4 ${className ?? "h-[250px]"}`}>
-              {isLoading && downLeaderboard.length === 0 ? (
+              {isLoading && agentLeaderboard.length === 0 ? (
                 <div className="space-y-2 py-2">
                   {[...Array(3)].map((_, i) => (
                     <div key={i} className="h-8 bg-muted/30 rounded animate-pulse" />
                   ))}
                 </div>
-              ) : downLeaderboard.length === 0 ? (
+              ) : agentLeaderboard.length === 0 ? (
                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm py-8">
-                  No down tilters yet
+                  No agents yet
                 </div>
               ) : (
                 <div className="py-2">
-                  {downLeaderboard.map((entry) => (
-                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Down} users={users} />
+                  {agentLeaderboard.map((entry) => (
+                    <LeaderboardItem key={entry.rank} entry={entry} side={Side.Agent} users={users} />
                   ))}
                 </div>
               )}

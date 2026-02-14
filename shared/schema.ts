@@ -4,8 +4,8 @@ import { createInsertSchema } from "drizzle-zod";
 
 export enum Side {
   None = 0,
-  Up = 1,
-  Down = 2,
+  Human = 1,
+  Agent = 2,
 }
 
 // Database tables

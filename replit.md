@@ -7,7 +7,7 @@ A Farcaster mini app for the TILT bonding-curve game on Base blockchain.
 TILT is a bonding curve token game where players can:
 - **Mint** tokens at the current bonding curve price
 - **Burn** tokens to reclaim ETH from the curve
-- **Switch Sides** between Up and Down factions
+- **Switch Sides** between Humans and Agents factions
 - View real-time activity feed and leaderboards
 
 ## Tech Stack
@@ -61,8 +61,8 @@ If no wallet is detected in the browser, an error message prompts the user to in
 
 - `GET /api/contract/state` - Current contract state (supply, ups, TVL, price)
 - `GET /api/contract/activities` - Recent activity feed
-- `GET /api/contract/leaderboard/up` - Top Up tilters
-- `GET /api/contract/leaderboard/down` - Top Down tilters
+- `GET /api/contract/leaderboard/humans` - Top Humans-side holders
+- `GET /api/contract/leaderboard/agents` - Top Agents-side holders
 - `POST /api/contract/user` - Get user balance and side
 
 ## WebSocket
@@ -75,7 +75,7 @@ Connect to `/ws` for real-time updates on:
 The frontend TiltContext automatically connects to WebSocket and handles:
 - Real-time contract state updates
 - Incremental activity updates (prepends new activities with deduplication)
-- Leaderboard updates for both Up and Down factions
+- Leaderboard updates for both Humans and Agents factions
 - Automatic reconnection with exponential backoff
 
 ## Farcaster Mini App

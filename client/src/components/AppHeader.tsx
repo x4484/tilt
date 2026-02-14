@@ -2,7 +2,7 @@ import { ConnectKitButton } from "connectkit";
 import { Badge } from "@/components/ui/badge";
 import { useTilt } from "@/context/TiltContext";
 import { formatEthAmount } from "@/lib/contract";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { User, Bot } from "lucide-react";
 
 export function AppHeader() {
   const { contractState, isInFrame } = useTilt();
@@ -26,13 +26,13 @@ export function AppHeader() {
           >
             {isUpOnly ? (
               <>
-                <TrendingUp className="mr-1 h-3 w-3" />
-                UP ONLY
+                <User className="mr-1 h-3 w-3" />
+                HUMANS ONLY
               </>
             ) : (
               <>
-                <TrendingDown className="mr-1 h-3 w-3" />
-                DOWN ONLY
+                <Bot className="mr-1 h-3 w-3" />
+                AGENTS ONLY
               </>
             )}
           </Badge>

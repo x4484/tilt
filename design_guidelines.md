@@ -20,7 +20,7 @@
 - Monospace for addresses/numbers: SF Mono or Roboto Mono
 
 **Hierarchy**:
-- Hero stats (total supply, ups count): Largest, bold
+- Hero stats (total supply, humans count): Largest, bold
 - Action buttons: 16px, medium weight
 - Data labels: 12px, uppercase, spaced tracking
 - Live feed items: 14px regular
@@ -44,9 +44,9 @@
 
 ### Core Stats Dashboard
 **Position**: Top of app, immediately visible
-- Large display cards for Total Supply, Ups Count, isUpOnly status
+- Large display cards for Total Supply, Humans Count, isUpOnly status
 - 2-column grid layout
-- Each stat: Icon/emoji + label + large number + trend indicator
+- Each stat: Icon + label + large number + trend indicator
 - Height: auto, content-based (avoid forced viewport heights)
 
 ### Bonding Curve Visualization
@@ -70,10 +70,10 @@
 - Disabled state when Up Only active
 
 **Switch Sides Card**:
-- Current side indicator (Up/Down badge)
+- Current side indicator (Humans/Agents badge)
 - Toggle/button to switch
 - Explanation of what switching does
-- Show impact on global Up count
+- Show impact on global Humans count
 
 ### Live Activity Feed
 - Scrollable list of recent events
@@ -83,7 +83,7 @@
 - Max height: ~250px with scroll
 
 ### Leaderboard
-- Two sections: "Top Up Holders" and "Top Down Holders"
+- Two sections: "Humans" and "Agents"
 - Rank number + Address (truncated) + Token Amount
 - Top 5-10 per category
 - Condensed rows, clear ranking
@@ -92,7 +92,7 @@
 **Position**: Sticky or prominent near top
 - Connected address (truncated with copy button)
 - Personal balance display
-- Current side badge (UP/DOWN with visual distinction)
+- Current side badge (HUMAN/AGENT with visual distinction)
 - Quick stats: "Your Tokens" + "Your Side"
 
 ### Navigation/Header
@@ -117,14 +117,14 @@
 - Primary actions: Bold, prominent
 - Secondary actions: Outlined or ghost style
 - Disabled states: Reduced opacity with clear messaging why
-**Badges**: Pill-shaped for side indicators (UP/DOWN)
-**Status Indicators**: Use icons + text for isUpOnly/isDownOnly state
+**Badges**: Pill-shaped for side indicators (HUMAN/AGENT)
+**Status Indicators**: Use icons + text for Humans Only/Agents Only state
 
 ## Information Architecture
 
 **Vertical Flow** (top to bottom):
 1. User wallet panel (personal stats)
-2. Global stats dashboard (total supply, ups count, isUpOnly)
+2. Global stats dashboard (total supply, humans count, isUpOnly)
 3. Bonding curve visualization
 4. Action cards (Mint, Burn, Switch Sides)
 5. Live activity feed
