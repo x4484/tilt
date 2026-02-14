@@ -113,6 +113,12 @@ export function MarketOverview() {
             </span>
           </div>
         </div>
+
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Mint $TILT on a bonding curve, pick a side — Up or Down — and
+          switch to shift the market. Price rises with supply. Burn
+          tokens anytime to reclaim ETH.
+        </p>
       </CardContent>
     </Card>
   );
