@@ -21,6 +21,8 @@ function DesktopLayout() {
       <AppHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
+        <AgentSkillCard />
+
         {error && (
           <Alert variant="destructive" className="relative mb-6">
             <AlertTriangle className="h-4 w-4" />
@@ -53,9 +55,6 @@ function DesktopLayout() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <AgentSkillCard />
-        </div>
       </main>
     </div>
   );
