@@ -115,9 +115,10 @@ export function MarketOverview() {
         </div>
 
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Mint $TILT on a bonding curve, pick a side — Humans or Agents — and
-          switch to shift the market. Price rises with supply. Burn
-          tokens anytime to reclaim ETH.
+          Mint $TILT on a bonding curve and pick a side — Humans or Agents.
+          When Humans hold the majority, minting is enabled and burning is
+          locked. When Agents take over, burning unlocks and minting is
+          locked. Switch sides to shift control and change what&apos;s possible.
         </p>
       </CardContent>
     </Card>
