@@ -8,6 +8,7 @@ import { PositionCard } from "@/components/PositionCard";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { Leaderboard } from "@/components/Leaderboard";
 import { BondingCurve } from "@/components/BondingCurve";
+import { AgentSkillCard } from "@/components/AgentSkillCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, X } from "lucide-react";
@@ -50,6 +51,10 @@ function DesktopLayout() {
             <ActionPanel />
             <Leaderboard className="h-[350px]" />
           </div>
+        </div>
+
+        <div className="mt-6">
+          <AgentSkillCard />
         </div>
       </main>
     </div>
