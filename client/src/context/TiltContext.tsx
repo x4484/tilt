@@ -1,6 +1,21 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  type ReactNode,
+} from "react";
 import { BrowserProvider, type Eip1193Provider } from "ethers";
-import type { ContractState, UserState, ActivityEvent, LeaderboardEntry } from "@shared/schema";
+import { useAccount } from "wagmi";
+import { useModal } from "connectkit";
+import type {
+  ContractState,
+  UserState,
+  ActivityEvent,
+  LeaderboardEntry,
+} from "@shared/schema";
 import { Side } from "@shared/schema";
 import {
   initializeFarcaster,
@@ -23,6 +38,7 @@ import {
   switchSides as contractSwitchSides,
   isContractConfigured,
 } from "@/lib/contract";
+import { useEthersBrowserProvider } from "@/lib/ethersAdapter";
 
 interface TiltContextType {
   isLoading: boolean;
@@ -40,8 +56,12 @@ interface TiltContextType {
   connect: () => Promise<void>;
   refreshContractState: () => Promise<void>;
   refreshUserState: () => Promise<void>;
-  getMintFees: (amount: string) => Promise<{ fees: string; amount: string } | null>;
-  getBurnRefunds: (amount: string) => Promise<{ refund: string; amount: string } | null>;
+  getMintFees: (
+    amount: string,
+  ) => Promise<{ fees: string; amount: string } | null>;
+  getBurnRefunds: (
+    amount: string,
+  ) => Promise<{ refund: string; amount: string } | null>;
   mint: (amount: string, fees: string) => Promise<boolean>;
   burn: (amount: string) => Promise<boolean>;
   switchSides: () => Promise<boolean>;
@@ -60,20 +80,41 @@ const EMPTY_CONTRACT_STATE: ContractState = {
 
 export function TiltProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
   const [isFarcasterReady, setIsFarcasterReady] = useState(false);
   const [isContractReady, setIsContractReady] = useState(false);
-  const [farcasterContext, setFarcasterContext] = useState<FarcasterContext | null>(null);
-  const [contractState, setContractState] = useState<ContractState | null>(null);
+  const [farcasterContext, setFarcasterContext] =
+    useState<FarcasterContext | null>(null);
+  const [contractState, setContractState] = useState<ContractState | null>(
+    null,
+  );
   const [userState, setUserState] = useState<UserState | null>(null);
   const [activities, setActivities] = useState<ActivityEvent[]>([]);
   const [upLeaderboard, setUpLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [downLeaderboard, setDownLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [downLeaderboard, setDownLeaderboard] = useState<LeaderboardEntry[]>(
+    [],
+  );
   const [error, setError] = useState<string | null>(null);
-  const [ethereumProvider, setEthereumProvider] = useState<Eip1193Provider | null>(null);
-  const [userAddress, setUserAddress] = useState<string | null>(null);
+
+  // Farcaster-mode state
+  const [farcasterProvider, setFarcasterProvider] =
+    useState<Eip1193Provider | null>(null);
+  const [farcasterAddress, setFarcasterAddress] = useState<string | null>(null);
 
   const isInFrame = isMiniApp();
+
+  // Web-mode state from wagmi / ConnectKit
+  const { address: wagmiAddress, isConnected: wagmiConnected } = useAccount();
+  const wagmiProvider = useEthersBrowserProvider();
+  const { setOpen: openConnectModal } = useModal();
+
+  // Unified derived state
+  const isConnected = isInFrame
+    ? Boolean(farcasterAddress)
+    : wagmiConnected;
+
+  const userAddress = isInFrame
+    ? farcasterAddress
+    : wagmiAddress ?? null;
 
   const clearError = useCallback(() => {
     setError(null);
@@ -82,10 +123,10 @@ export function TiltProvider({ children }: { children: ReactNode }) {
   const fetchDataFromApi = useCallback(async () => {
     try {
       const [stateRes, activitiesRes, upRes, downRes] = await Promise.all([
-        fetch('/api/contract/state'),
-        fetch('/api/contract/activities?limit=20'),
-        fetch('/api/contract/leaderboard/up?limit=10'),
-        fetch('/api/contract/leaderboard/down?limit=10'),
+        fetch("/api/contract/state"),
+        fetch("/api/contract/activities?limit=20"),
+        fetch("/api/contract/leaderboard/up?limit=10"),
+        fetch("/api/contract/leaderboard/down?limit=10"),
       ]);
 
       if (stateRes.ok) {
@@ -142,18 +183,15 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      // Use server API to fetch user state (more reliable than direct RPC from browser)
       const response = await fetch(`/api/contract/user/${userAddress}`);
       if (response.ok) {
         const data = await response.json();
-        console.log("User state from server API:", data);
         setUserState({
           address: userAddress,
           balance: data.balance,
           side: data.side as Side,
         });
       } else {
-        // Fallback to direct blockchain fetch
         const provider = await getReadOnlyProvider();
         const state = await fetchUserState(provider, userAddress);
         setUserState(state);
@@ -163,22 +201,34 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
   }, [userAddress]);
 
+  // -- Connect wallet --
   const connect = useCallback(async () => {
+    if (!isInFrame) {
+      // Web mode: open ConnectKit modal
+      openConnectModal(true);
+      return;
+    }
+
+    // Farcaster mode: manual wallet flow
     setIsLoading(true);
     setError(null);
 
     try {
       const provider = await getEthereumProvider();
       if (!provider) {
-        setError("No wallet detected. Please install MetaMask or another Web3 wallet.");
+        setError(
+          "No wallet detected. Please install MetaMask or another Web3 wallet.",
+        );
         return;
       }
 
-      setEthereumProvider(provider);
+      setFarcasterProvider(provider);
 
       const accounts = await requestAccounts();
       if (accounts.length === 0) {
-        setError("No accounts found. Please unlock your wallet and try again.");
+        setError(
+          "No accounts found. Please unlock your wallet and try again.",
+        );
         return;
       }
 
@@ -188,146 +238,175 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         console.warn("Could not switch to Base network:", switchErr);
       }
 
-      setUserAddress(accounts[0]);
-      setIsConnected(true);
+      setFarcasterAddress(accounts[0]);
     } catch (err) {
       console.error("Connection failed:", err);
       setError(err instanceof Error ? err.message : "Connection failed");
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isInFrame, openConnectModal]);
 
-  // Calculate mint fees client-side as fallback
-  const calculateMintFeesClientSide = useCallback((amount: string) => {
-    const amountNum = BigInt(amount);
-    const totalSupply = BigInt(contractState?.totalSupply || "0");
-    const newTotal = totalSupply + amountNum;
-    
-    // _totalPriceFor formula: (n * (n + 1) * (2n + 1)) / 6
-    const oldCost = (totalSupply * (totalSupply + BigInt(1)) * (BigInt(2) * totalSupply + BigInt(1))) / BigInt(6);
-    const newCost = (newTotal * (newTotal + BigInt(1)) * (BigInt(2) * newTotal + BigInt(1))) / BigInt(6);
-    const baseCost = newCost - oldCost;
-    
-    // Add 1% fee (rounded up): (baseCost * 100 + 9999) / 10000
-    const fee = (baseCost * BigInt(100) + BigInt(9999)) / BigInt(10000);
-    const totalCost = baseCost + fee;
-    
-    // Convert to ETH (wei to ETH)
-    const totalCostStr = totalCost.toString();
-    const ethValue = Number(totalCostStr) / 1e18;
-    
-    return { fees: ethValue.toFixed(18), amount };
-  }, [contractState?.totalSupply]);
-
-  // Calculate burn refunds client-side as fallback
-  const calculateBurnRefundsClientSide = useCallback((amount: string) => {
-    const amountNum = BigInt(amount);
-    const totalSupply = BigInt(contractState?.totalSupply || "0");
-    if (totalSupply < amountNum) {
-      return { refund: "0", amount };
+  // -- Get a BrowserProvider for write operations --
+  const getWriteProvider = useCallback(async (): Promise<BrowserProvider | null> => {
+    if (isInFrame) {
+      if (!farcasterProvider) return null;
+      return getProvider(farcasterProvider);
     }
-    const newTotal = totalSupply - amountNum;
-    
-    const oldCost = (totalSupply * (totalSupply + BigInt(1)) * (BigInt(2) * totalSupply + BigInt(1))) / BigInt(6);
-    const newCost = (newTotal * (newTotal + BigInt(1)) * (BigInt(2) * newTotal + BigInt(1))) / BigInt(6);
-    const grossRefund = oldCost - newCost;
-    
-    // Subtract 1% fee (rounded up)
-    const fee = (grossRefund * BigInt(100) + BigInt(9999)) / BigInt(10000);
-    const netRefund = grossRefund - fee;
-    
-    const refundStr = netRefund.toString();
-    const ethValue = Number(refundStr) / 1e18;
-    
-    return { refund: ethValue.toFixed(18), amount };
-  }, [contractState?.totalSupply]);
+    return wagmiProvider ?? null;
+  }, [isInFrame, farcasterProvider, wagmiProvider]);
 
-  const getMintFees = useCallback(async (amount: string) => {
-    // Always try contract first, fallback to client-side calculation
-    if (isContractConfigured()) {
+  // -- Fee calculations (client-side fallback) --
+  const calculateMintFeesClientSide = useCallback(
+    (amount: string) => {
+      const amountNum = BigInt(amount);
+      const totalSupply = BigInt(contractState?.totalSupply || "0");
+      const newTotal = totalSupply + amountNum;
+
+      const oldCost =
+        (totalSupply * (totalSupply + BigInt(1)) * (BigInt(2) * totalSupply + BigInt(1))) /
+        BigInt(6);
+      const newCost =
+        (newTotal * (newTotal + BigInt(1)) * (BigInt(2) * newTotal + BigInt(1))) /
+        BigInt(6);
+      const baseCost = newCost - oldCost;
+
+      const fee =
+        (baseCost * BigInt(100) + BigInt(9999)) / BigInt(10000);
+      const totalCost = baseCost + fee;
+
+      const totalCostStr = totalCost.toString();
+      const ethValue = Number(totalCostStr) / 1e18;
+
+      return { fees: ethValue.toFixed(18), amount };
+    },
+    [contractState?.totalSupply],
+  );
+
+  const calculateBurnRefundsClientSide = useCallback(
+    (amount: string) => {
+      const amountNum = BigInt(amount);
+      const totalSupply = BigInt(contractState?.totalSupply || "0");
+      if (totalSupply < amountNum) {
+        return { refund: "0", amount };
+      }
+      const newTotal = totalSupply - amountNum;
+
+      const oldCost =
+        (totalSupply * (totalSupply + BigInt(1)) * (BigInt(2) * totalSupply + BigInt(1))) /
+        BigInt(6);
+      const newCost =
+        (newTotal * (newTotal + BigInt(1)) * (BigInt(2) * newTotal + BigInt(1))) /
+        BigInt(6);
+      const grossRefund = oldCost - newCost;
+
+      const fee =
+        (grossRefund * BigInt(100) + BigInt(9999)) / BigInt(10000);
+      const netRefund = grossRefund - fee;
+
+      const refundStr = netRefund.toString();
+      const ethValue = Number(refundStr) / 1e18;
+
+      return { refund: ethValue.toFixed(18), amount };
+    },
+    [contractState?.totalSupply],
+  );
+
+  const getMintFees = useCallback(
+    async (amount: string) => {
+      if (isContractConfigured()) {
+        try {
+          const provider = await getReadOnlyProvider();
+          return await fetchMintFees(provider, amount);
+        } catch (err) {
+          console.error(
+            "Failed to get mint fees from contract, using fallback:",
+            err,
+          );
+        }
+      }
+      return calculateMintFeesClientSide(amount);
+    },
+    [calculateMintFeesClientSide],
+  );
+
+  const getBurnRefunds = useCallback(
+    async (amount: string) => {
+      if (isContractConfigured()) {
+        try {
+          const provider = await getReadOnlyProvider();
+          return await fetchBurnRefunds(provider, amount);
+        } catch (err) {
+          console.error(
+            "Failed to get burn refunds from contract, using fallback:",
+            err,
+          );
+        }
+      }
+      return calculateBurnRefundsClientSide(amount);
+    },
+    [calculateBurnRefundsClientSide],
+  );
+
+  // -- Post activity & update leaderboard --
+  const postActivity = useCallback(
+    async (
+      type: "mint" | "burn" | "switch",
+      amount: string,
+      txHash?: string,
+      newSide?: Side,
+    ) => {
+      if (!userAddress) return;
+
       try {
-        const provider = await getReadOnlyProvider();
-        const result = await fetchMintFees(provider, amount);
-        console.log("Mint fees from contract:", result);
-        return result;
-      } catch (err) {
-        console.error("Failed to get mint fees from contract, using fallback:", err);
-      }
-    }
-    
-    // Fallback to client-side calculation
-    const result = calculateMintFeesClientSide(amount);
-    console.log("Mint fees from fallback calculation:", result);
-    return result;
-  }, [calculateMintFeesClientSide]);
+        await fetch("/api/contract/activity", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type,
+            address: userAddress,
+            amount,
+            txHash,
+            newSide,
+          }),
+        });
 
-  const getBurnRefunds = useCallback(async (amount: string) => {
-    // Always try contract first, fallback to client-side calculation
-    if (isContractConfigured()) {
-      try {
-        const provider = await getReadOnlyProvider();
-        return await fetchBurnRefunds(provider, amount);
+        const activitiesRes = await fetch(
+          "/api/contract/activities?limit=20",
+        );
+        if (activitiesRes.ok) {
+          const acts = await activitiesRes.json();
+          setActivities(acts);
+        }
       } catch (err) {
-        console.error("Failed to get burn refunds from contract, using fallback:", err);
+        console.error("Failed to post activity:", err);
       }
-    }
-    
-    // Fallback to client-side calculation
-    return calculateBurnRefundsClientSide(amount);
-  }, [calculateBurnRefundsClientSide]);
-
-  const postActivity = useCallback(async (type: 'mint' | 'burn' | 'switch', amount: string, txHash?: string, newSide?: Side) => {
-    if (!userAddress) return;
-    
-    try {
-      await fetch('/api/contract/activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type,
-          address: userAddress,
-          amount,
-          txHash,
-          newSide,
-        }),
-      });
-      
-      // Refresh activities
-      const activitiesRes = await fetch('/api/contract/activities?limit=20');
-      if (activitiesRes.ok) {
-        const acts = await activitiesRes.json();
-        setActivities(acts);
-      }
-    } catch (err) {
-      console.error("Failed to post activity:", err);
-    }
-  }, [userAddress]);
+    },
+    [userAddress],
+  );
 
   const updateLeaderboardEntry = useCallback(async () => {
     if (!userAddress) return;
-    
+
     try {
-      // Fetch fresh user state from blockchain to get accurate balance and side
       const provider = await getReadOnlyProvider();
       const freshUserState = await fetchUserState(provider, userAddress);
-      
-      await fetch('/api/contract/leaderboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+
+      await fetch("/api/contract/leaderboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           address: userAddress,
           balance: freshUserState.balance,
           side: freshUserState.side,
         }),
       });
-      
-      // Refresh leaderboards
+
       const [upRes, downRes] = await Promise.all([
-        fetch('/api/contract/leaderboard/up?limit=10'),
-        fetch('/api/contract/leaderboard/down?limit=10'),
+        fetch("/api/contract/leaderboard/up?limit=10"),
+        fetch("/api/contract/leaderboard/down?limit=10"),
       ]);
-      
+
       if (upRes.ok) {
         const up = await upRes.json();
         setUpLeaderboard(up);
@@ -341,109 +420,147 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     }
   }, [userAddress]);
 
-  const mint = useCallback(async (amount: string, fees: string): Promise<boolean> => {
-    if (!ethereumProvider) {
-      setError("Wallet not connected");
-      return false;
-    }
+  // -- Contract write operations --
+  const mint = useCallback(
+    async (amount: string, fees: string): Promise<boolean> => {
+      const provider = await getWriteProvider();
+      if (!provider) {
+        setError("Wallet not connected");
+        return false;
+      }
 
-    if (!isContractConfigured()) {
-      setError("Contract address not configured. Please set VITE_CONTRACT_ADDRESS.");
-      return false;
-    }
+      if (!isContractConfigured()) {
+        setError(
+          "Contract address not configured. Please set VITE_CONTRACT_ADDRESS.",
+        );
+        return false;
+      }
 
-    try {
-      setIsLoading(true);
-      const provider = await getProvider(ethereumProvider);
-      const result = await contractMint(provider, amount, fees);
-      const txHash = result?.hash;
-      
-      await refreshContractState();
-      await refreshUserState();
-      
-      // Post activity and update leaderboard
-      await postActivity('mint', amount, txHash);
-      setTimeout(() => updateLeaderboardEntry(), 2000);
-      
-      return true;
-    } catch (err) {
-      console.error("Mint failed:", err);
-      setError(err instanceof Error ? err.message : "Mint failed");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry]);
+      try {
+        setIsLoading(true);
+        const result = await contractMint(provider, amount, fees);
+        const txHash = result?.hash;
 
-  const burn = useCallback(async (amount: string): Promise<boolean> => {
-    if (!ethereumProvider) {
-      setError("Wallet not connected");
-      return false;
-    }
+        await refreshContractState();
+        await refreshUserState();
 
-    if (!isContractConfigured()) {
-      setError("Contract address not configured. Please set VITE_CONTRACT_ADDRESS.");
-      return false;
-    }
+        await postActivity("mint", amount, txHash);
+        setTimeout(() => updateLeaderboardEntry(), 2000);
 
-    try {
-      setIsLoading(true);
-      const provider = await getProvider(ethereumProvider);
-      const result = await contractBurn(provider, amount);
-      const txHash = result?.hash;
-      
-      await refreshContractState();
-      await refreshUserState();
-      
-      // Post activity and update leaderboard
-      await postActivity('burn', amount, txHash);
-      setTimeout(() => updateLeaderboardEntry(), 2000);
-      
-      return true;
-    } catch (err) {
-      console.error("Burn failed:", err);
-      setError(err instanceof Error ? err.message : "Burn failed");
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry]);
+        return true;
+      } catch (err) {
+        console.error("Mint failed:", err);
+        setError(err instanceof Error ? err.message : "Mint failed");
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      getWriteProvider,
+      refreshContractState,
+      refreshUserState,
+      postActivity,
+      updateLeaderboardEntry,
+    ],
+  );
+
+  const burn = useCallback(
+    async (amount: string): Promise<boolean> => {
+      const provider = await getWriteProvider();
+      if (!provider) {
+        setError("Wallet not connected");
+        return false;
+      }
+
+      if (!isContractConfigured()) {
+        setError(
+          "Contract address not configured. Please set VITE_CONTRACT_ADDRESS.",
+        );
+        return false;
+      }
+
+      try {
+        setIsLoading(true);
+        const result = await contractBurn(provider, amount);
+        const txHash = result?.hash;
+
+        await refreshContractState();
+        await refreshUserState();
+
+        await postActivity("burn", amount, txHash);
+        setTimeout(() => updateLeaderboardEntry(), 2000);
+
+        return true;
+      } catch (err) {
+        console.error("Burn failed:", err);
+        setError(err instanceof Error ? err.message : "Burn failed");
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      getWriteProvider,
+      refreshContractState,
+      refreshUserState,
+      postActivity,
+      updateLeaderboardEntry,
+    ],
+  );
 
   const switchSides = useCallback(async (): Promise<boolean> => {
-    if (!ethereumProvider) {
+    const provider = await getWriteProvider();
+    if (!provider) {
       setError("Wallet not connected");
       return false;
     }
 
     if (!isContractConfigured()) {
-      setError("Contract address not configured. Please set VITE_CONTRACT_ADDRESS.");
+      setError(
+        "Contract address not configured. Please set VITE_CONTRACT_ADDRESS.",
+      );
       return false;
     }
 
     try {
       setIsLoading(true);
-      const provider = await getProvider(ethereumProvider);
       const result = await contractSwitchSides(provider);
       const txHash = result?.hash;
-      
+
       await refreshContractState();
       await refreshUserState();
-      
-      // Post activity with the new side
-      const newSide = userState?.side === Side.Up ? Side.Down : Side.Up;
-      await postActivity('switch', userState?.balance || '0', txHash, newSide);
+
+      const newSide =
+        userState?.side === Side.Up ? Side.Down : Side.Up;
+      await postActivity(
+        "switch",
+        userState?.balance || "0",
+        txHash,
+        newSide,
+      );
       setTimeout(() => updateLeaderboardEntry(), 2000);
-      
+
       return true;
     } catch (err) {
       console.error("Switch sides failed:", err);
-      setError(err instanceof Error ? err.message : "Switch sides failed");
+      setError(
+        err instanceof Error ? err.message : "Switch sides failed",
+      );
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, [ethereumProvider, refreshContractState, refreshUserState, postActivity, updateLeaderboardEntry, userState]);
+  }, [
+    getWriteProvider,
+    refreshContractState,
+    refreshUserState,
+    postActivity,
+    updateLeaderboardEntry,
+    userState,
+  ]);
 
+  // -- Initialization --
   useEffect(() => {
     const init = async () => {
       const context = await initializeFarcaster();
@@ -460,13 +577,14 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     init();
   }, [refreshContractState, fetchDataFromApi]);
 
+  // Refresh user state when address changes (either mode)
   useEffect(() => {
     if (userAddress) {
       refreshUserState();
     }
   }, [userAddress, refreshUserState]);
 
-  // WebSocket connection for real-time updates
+  // -- WebSocket real-time updates --
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -478,7 +596,8 @@ export function TiltProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const protocol =
+        window.location.protocol === "https:" ? "wss:" : "ws:";
       const wsUrl = `${protocol}//${window.location.host}/ws`;
 
       try {
@@ -494,19 +613,25 @@ export function TiltProvider({ children }: { children: ReactNode }) {
           console.log("WebSocket disconnected");
           if (reconnectAttemptsRef.current < maxReconnectAttempts) {
             reconnectAttemptsRef.current++;
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-            reconnectTimeoutRef.current = setTimeout(connectWebSocket, delay);
+            const delay = Math.min(
+              1000 * Math.pow(2, reconnectAttemptsRef.current),
+              30000,
+            );
+            reconnectTimeoutRef.current = setTimeout(
+              connectWebSocket,
+              delay,
+            );
           }
         };
 
-        ws.onerror = (error) => {
-          console.error("WebSocket error:", error);
+        ws.onerror = (wsError) => {
+          console.error("WebSocket error:", wsError);
         };
 
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
-            
+
             switch (message.type) {
               case "contract_state":
                 if (message.data) {
@@ -519,32 +644,36 @@ export function TiltProvider({ children }: { children: ReactNode }) {
                 }
                 break;
               case "new_activity":
-                // Prepend new activity to the existing list
                 if (message.data) {
-                  setActivities(prev => {
+                  setActivities((prev) => {
                     const newActivity = message.data as ActivityEvent;
-                    // Avoid duplicates by checking ID
-                    if (prev.some(a => a.id === newActivity.id)) {
+                    if (prev.some((a) => a.id === newActivity.id)) {
                       return prev;
                     }
-                    return [newActivity, ...prev].slice(0, 50); // Keep max 50 activities
+                    return [newActivity, ...prev].slice(0, 50);
                   });
                 }
                 break;
               case "leaderboard":
                 if (message.data) {
-                  const { up, down } = message.data as { up: LeaderboardEntry[]; down: LeaderboardEntry[] };
+                  const { up, down } = message.data as {
+                    up: LeaderboardEntry[];
+                    down: LeaderboardEntry[];
+                  };
                   if (up) setUpLeaderboard(up);
                   if (down) setDownLeaderboard(down);
                 }
                 break;
             }
-          } catch (error) {
-            console.error("Failed to parse WebSocket message:", error);
+          } catch (parseError) {
+            console.error(
+              "Failed to parse WebSocket message:",
+              parseError,
+            );
           }
         };
-      } catch (error) {
-        console.error("Failed to create WebSocket:", error);
+      } catch (wsError) {
+        console.error("Failed to create WebSocket:", wsError);
       }
     };
 
@@ -560,18 +689,19 @@ export function TiltProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Fallback polling for when WebSocket is not available
+  // Fallback polling when WebSocket is unavailable
   useEffect(() => {
     const interval = setInterval(() => {
-      // Only fetch from API if WebSocket is not connected
-      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      if (
+        !wsRef.current ||
+        wsRef.current.readyState !== WebSocket.OPEN
+      ) {
         fetchDataFromApi();
       }
-      // Reduce direct RPC calls to avoid rate limits - rely on API/WebSocket data
       if (userAddress && isContractConfigured()) {
         refreshUserState();
       }
-    }, 60000); // Reduced to 60s to minimize rate limit issues
+    }, 60000);
 
     return () => clearInterval(interval);
   }, [refreshUserState, userAddress, fetchDataFromApi]);

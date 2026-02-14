@@ -1,10 +1,14 @@
 import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useTilt } from "@/context/TiltContext";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from "recharts";
+import { XAxis, YAxis, ResponsiveContainer, Area, AreaChart } from "recharts";
 import { TrendingUp } from "lucide-react";
 
-export function BondingCurve() {
+interface BondingCurveProps {
+  className?: string;
+}
+
+export function BondingCurve({ className }: BondingCurveProps) {
   const { contractState } = useTilt();
   
   const totalSupply = parseInt(contractState?.totalSupply || "1736000", 10);
@@ -17,8 +21,7 @@ export function BondingCurve() {
     return Array.from({ length: points + 1 }, (_, i) => {
       const supply = Math.floor(i * step);
       const price = (supply * supply) / 1e18;
-      const isCurrent = supply <= totalSupply && (i === points || Math.floor((i + 1) * step) > totalSupply);
-      
+
       return {
         supply,
         price,
@@ -37,7 +40,7 @@ export function BondingCurve() {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0 pr-4">
-        <div className="h-[200px] w-full">
+        <div className={`w-full ${className ?? "h-[200px]"}`}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
               <defs>

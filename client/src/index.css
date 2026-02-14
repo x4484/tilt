@@ -43,7 +43,7 @@
   --chart-3: 120 60% 30%;
   --chart-4: 120 40% 25%;
   --chart-5: 120 20% 20%;
-  --font-sans: Inter, SF Pro, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'DM Sans', SF Pro, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, monospace;
   --radius: .5rem;

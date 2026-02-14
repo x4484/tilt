@@ -42,7 +42,11 @@ function LeaderboardItem({
   );
 }
 
-export function Leaderboard() {
+interface LeaderboardProps {
+  className?: string;
+}
+
+export function Leaderboard({ className }: LeaderboardProps) {
   const { upLeaderboard, downLeaderboard, contractState, isLoading } = useTilt();
 
   // Collect all addresses to resolve
@@ -101,7 +105,7 @@ export function Leaderboard() {
             <div className="px-4 py-2 border-b border-border/30 text-xs text-muted-foreground">
               {upStats.percentage}% : {upStats.total} TILT : {upStats.players} players
             </div>
-            <ScrollArea className="h-[250px] px-4">
+            <ScrollArea className={`px-4 ${className ?? "h-[250px]"}`}>
               {isLoading && upLeaderboard.length === 0 ? (
                 <div className="space-y-2 py-2">
                   {[...Array(5)].map((_, i) => (
@@ -126,7 +130,7 @@ export function Leaderboard() {
             <div className="px-4 py-2 border-b border-border/30 text-xs text-muted-foreground">
               {downStats.percentage}% : {downStats.total} TILT : {downStats.players} players
             </div>
-            <ScrollArea className="h-[250px] px-4">
+            <ScrollArea className={`px-4 ${className ?? "h-[250px]"}`}>
               {isLoading && downLeaderboard.length === 0 ? (
                 <div className="space-y-2 py-2">
                   {[...Array(3)].map((_, i) => (
