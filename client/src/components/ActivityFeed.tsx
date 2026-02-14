@@ -57,7 +57,7 @@ function ActivityItem({
   };
 
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
+    <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0 animate-fade-slide-in">
       <Avatar className={`w-6 h-6 ring-2 ${getAvatarBorderColor()}`}>
         {pfpUrl && <AvatarImage src={pfpUrl} alt={displayName} />}
         <AvatarFallback className="bg-muted text-xs">
@@ -90,10 +90,10 @@ export function ActivityFeed({ className }: ActivityFeedProps) {
   const { data: users } = useFarcasterUsers(allAddresses);
 
   return (
-    <Card className="border-primary/20 bg-card/80">
+    <Card className="card-tertiary">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Activity className="w-4 h-4 text-primary" />
+        <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Activity className="w-4 h-4 text-[hsl(var(--primary-muted))]" />
           Recent Activity
         </CardTitle>
       </CardHeader>

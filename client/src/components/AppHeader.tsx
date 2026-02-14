@@ -19,7 +19,7 @@ export function AppHeader() {
         <div className="hidden items-center gap-4 md:flex">
           <Badge
             variant={isUpOnly ? "default" : "destructive"}
-            className="px-3 py-1 text-xs font-bold"
+            className={`px-3 py-1 text-xs font-bold ${isUpOnly ? "animate-glow-pulse" : "animate-glow-pulse-red"}`}
           >
             {isUpOnly ? (
               <>
@@ -35,7 +35,7 @@ export function AppHeader() {
           </Badge>
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>TVL</span>
-            <span className="font-mono font-bold text-primary">
+            <span className="font-mono font-bold text-foreground">
               {formatEthAmount(tvl)} ETH
             </span>
           </div>

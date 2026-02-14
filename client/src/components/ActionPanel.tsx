@@ -89,7 +89,7 @@ function MintForm() {
             Minting...
           </>
         ) : !isConnected ? (
-          "Connect Wallet"
+          "Not Connected"
         ) : !isUpOnly ? (
           "Minting Disabled"
         ) : (
@@ -197,7 +197,7 @@ function BurnForm() {
             Burning...
           </>
         ) : !isConnected ? (
-          "Connect Wallet"
+          "Not Connected"
         ) : isUpOnly ? (
           "Burning Disabled"
         ) : amountNum > userBalance ? (
@@ -212,9 +212,11 @@ function BurnForm() {
 
 export function ActionPanel() {
   return (
-    <Card className="border-primary/20 bg-card/80">
+    <Card className="card-primary">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">Trade</CardTitle>
+        <CardTitle className="text-sm uppercase tracking-widest text-muted-foreground">
+          Trade
+        </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <Tabs defaultValue="mint" className="w-full">
@@ -223,7 +225,7 @@ export function ActionPanel() {
               value="mint"
               className="flex-1 gap-2 rounded-none border-b-2 border-transparent py-3 data-[state=active]:border-primary data-[state=active]:bg-transparent"
             >
-              <Plus className="h-4 w-4 text-primary" />
+              <Plus className="h-4 w-4 text-[hsl(var(--primary-muted))]" />
               Mint
             </TabsTrigger>
             <TabsTrigger

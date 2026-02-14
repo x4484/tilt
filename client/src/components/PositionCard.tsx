@@ -55,16 +55,24 @@ export function PositionCard() {
 
   if (!isConnected) {
     return (
-      <Card className="border-primary/30 bg-card/80">
+      <Card className="border-primary/20 bg-card/80">
         <CardContent className="p-6 text-center">
-          <Wallet className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
-          <p className="mb-4 text-sm text-muted-foreground">
-            Connect your wallet to view your position
+          <Wallet className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
+          <p className="text-sm text-muted-foreground">
+            {isInFrame
+              ? "Connect your wallet to view your position"
+              : "Connect with the button above to view your position"}
           </p>
-          <Button onClick={connect} disabled={isLoading} className="w-full">
-            <Wallet className="mr-2 h-4 w-4" />
-            {isLoading ? "Connecting..." : "Connect Wallet"}
-          </Button>
+          {isInFrame && (
+            <Button
+              onClick={connect}
+              disabled={isLoading}
+              className="mt-4 w-full"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              {isLoading ? "Connecting..." : "Connect Wallet"}
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -87,9 +95,9 @@ export function PositionCard() {
     currentSide === Side.Up ? "destructive" : "default";
 
   return (
-    <Card className="border-primary/30 bg-card/80">
+    <Card className="border-primary/20 bg-card/80">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between text-base">
+        <CardTitle className="flex items-center justify-between text-sm uppercase tracking-widest text-muted-foreground">
           <span>Your Position</span>
           {isInFrame && currentSide !== Side.None && (
             <Button
@@ -107,8 +115,8 @@ export function PositionCard() {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20">
-              <Wallet className="h-5 w-5 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Wallet className="h-5 w-5 text-[hsl(var(--primary-muted))]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -185,7 +193,8 @@ export function PositionCard() {
 
         {currentSide === Side.None && (
           <p className="text-center text-sm text-muted-foreground">
-            Mint tokens first to choose a side
+            Your first mint puts you on UP. Switch later to change the
+            market.
           </p>
         )}
       </CardContent>

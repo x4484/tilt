@@ -46,6 +46,7 @@
   --font-sans: 'DM Sans', SF Pro, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, monospace;
+  --primary-muted: 120 60% 40%;
   --radius: .5rem;
   --shadow-2xs: 0px 2px 0px 0px hsl(120 100% 50% / 0.02);
   --shadow-xs: 0px 2px 0px 0px hsl(120 100% 50% / 0.04);
@@ -287,4 +288,60 @@
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
   }
+}
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 4px hsl(120 100% 50% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px hsl(120 100% 50% / 0.6), 0 0 24px hsl(120 100% 50% / 0.2);
+  }
+}
+
+@keyframes glow-pulse-red {
+  0%, 100% {
+    box-shadow: 0 0 4px hsl(0 84% 45% / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 12px hsl(0 84% 45% / 0.6), 0 0 24px hsl(0 84% 45% / 0.2);
+  }
+}
+
+.animate-fade-slide-in {
+  animation: fade-slide-in 0.3s ease-out both;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+.animate-glow-pulse-red {
+  animation: glow-pulse-red 2s ease-in-out infinite;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.card-primary {
+  border-color: hsl(120 100% 50% / 0.3);
+  background: hsl(120 10% 7% / 0.9);
+  box-shadow: 0 0 20px hsl(120 100% 50% / 0.04), inset 0 1px 0 hsl(120 100% 50% / 0.06);
+}
+
+.card-tertiary {
+  border-color: hsl(120 20% 15% / 0.5);
+  background: hsl(120 10% 6% / 0.7);
 }

@@ -73,31 +73,31 @@ export function Leaderboard({ className }: LeaderboardProps) {
   };
 
   return (
-    <Card className="border-primary/20 bg-card/80">
+    <Card className="card-tertiary">
       <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Trophy className="w-4 h-4 text-primary" />
+        <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Trophy className="w-4 h-4 text-[hsl(var(--primary-muted))]" />
           Top Tilters
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <Tabs defaultValue="up" className="w-full">
-          <TabsList className="w-full rounded-none border-b border-border/50 bg-transparent h-auto p-0">
-            <TabsTrigger 
-              value="up" 
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent py-3"
+          <TabsList className="mx-4 mt-2 grid w-auto grid-cols-2 bg-muted/50">
+            <TabsTrigger
+              value="up"
+              className="gap-1.5 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary"
               data-testid="tab-up-tilters"
             >
-              <TrendingUp className="w-4 h-4 mr-2 text-primary" />
-              Up Tilters
+              <TrendingUp className="h-3 w-3" />
+              Up
             </TabsTrigger>
-            <TabsTrigger 
-              value="down" 
-              className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-destructive data-[state=active]:bg-transparent py-3"
+            <TabsTrigger
+              value="down"
+              className="gap-1.5 text-xs data-[state=active]:bg-destructive/20 data-[state=active]:text-destructive"
               data-testid="tab-down-tilters"
             >
-              <TrendingDown className="w-4 h-4 mr-2 text-destructive" />
-              Down Tilters
+              <TrendingDown className="h-3 w-3" />
+              Down
             </TabsTrigger>
           </TabsList>
 
