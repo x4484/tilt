@@ -1,6 +1,5 @@
 import { ConnectKitButton } from "connectkit";
 import { Badge } from "@/components/ui/badge";
-import { TiltLogoSimple } from "@/components/TiltLogo";
 import { useTilt } from "@/context/TiltContext";
 import { formatEthAmount } from "@/lib/contract";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -14,7 +13,11 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 lg:px-6">
-        <TiltLogoSimple className="text-xl text-primary" />
+        <img
+          src="/tilt-logo.jpg"
+          alt="TILT"
+          className="h-8"
+        />
 
         <div className="hidden items-center gap-4 md:flex">
           <Badge
