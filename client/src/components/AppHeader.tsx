@@ -16,7 +16,7 @@ export function AppHeader() {
         <img
           src="/tilt-logo.jpg"
           alt="TILT"
-          className="h-8"
+          className="h-14"
         />
 
         <div className="hidden items-center gap-4 md:flex">
